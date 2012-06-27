@@ -1,100 +1,137 @@
-int val;
-int laserPin = 13;
-int encoder0PinA = 11;
-int encoder0PinB = 9;
-int encoder0Pos = 0;
-int encoder0PinALast = LOW;
-int n = LOW;
-int r = 0;
-int ticks = 127;
-int divs = 32;
-int time_taken = 0;
-int last_rotation = 0;
-int decrement_freq = 2; // how many rotations before decrementing 1 from encoder0Pos
+/*
+ * Constant Decalaraion
+ */
+const short LASER_PIN = 12;
+const short IR_PIN = 2;
 
-void setup() {
-  pinMode (laserPin,OUTPUT);
-  pinMode (encoder0PinA,INPUT);
-  pinMode (encoder0PinB,INPUT);
-  digitalWrite(laserPin, HIGH);
-  Serial.begin (9600);
+/*
+ * Globals used in ISR
+ */
+volatile unsigned long us_per_rotation = 0;
+volatile unsigned long last_trigger = 0;
+volatile boolean triggered = false;
+
+/*
+ * Other Globals
+ */
+unsigned int duration_on_us = 80;
+short num_faces = 4;
+boolean laser_on_override = false;
+
+/*
+ * Board Setup
+ */ 
+void setup(){
+  pinMode(LASER_PIN, OUTPUT);
+  attachInterrupt(0, handle_ir, FALLING);
+  Serial.begin(9600);
 }
 
-void loop() { 
-  n = digitalRead(encoder0PinA);
-  if ((encoder0PinALast == LOW) && (n == HIGH)) {
-    if (digitalRead(encoder0PinB) == LOW) {
-      encoder0Pos--;
-    } else {
-      encoder0Pos++;
-    }
-    //Serial.print (encoder0Pos);
-    //Serial.print ("\n");
-    if (encoder0Pos == ticks) {
-      r--;
-      fullRotation();
-    }
-    else if (encoder0Pos == -ticks) {
-      r++;
-      fullRotation();
-    }
-  }
-  encoder0PinALast = n;
-  static long laser_on = 0;
-  static long last_turn_on = micros();
-  long now = micros();
-  int rem = (-encoder0Pos) % divs;
-  if (rem == 0) {
-    if (laser_on == 0) {
-      last_turn_on = now;
-      laser_on = 1;
-      digitalWrite(laserPin, HIGH);
-      //Serial.println("LASER ON");
-    }
-  } else if (laser_on == 1 && (now - last_turn_on > 30)) {
-      laser_on = 0;
-      digitalWrite(laserPin, LOW);
-      last_turn_on = now;
-      //Serial.println("LASER OFF");
-  }
-  handleCmd();
+/*
+ * Infrared Sensor ISR
+ */ 
+void handle_ir(){
+  // update microseconds per rotation and time of the last trigger
+  // also, indicate that we got a trigger.
+  us_per_rotation = micros() - last_trigger;
+  last_trigger = micros();
+  triggered = true;
 }
 
-void fullRotation() {
-  int now = millis();
-  time_taken = now - last_rotation;
-  last_rotation = now;
-  encoder0Pos = 0;
-  if (r % decrement_freq == 0) {
-    encoder0Pos += 2;
+/*
+ * Output a single pixel.
+ */ 
+void output_pixel(int num_pix){
+  for (int i = 0; i < num_pix; i++) {
+    if (i != 0) {
+      delayMicroseconds(duration_on_us);
+    }
+    digitalWrite(LASER_PIN, HIGH);
+    delayMicroseconds(duration_on_us);
+    digitalWrite(LASER_PIN, LOW);
   }
 }
 
-void handleCmd() {
- while (Serial.available() > 0) {
-   byte b = Serial.read();
-   if (b == 'r') {
-    Serial.print ("r=");
-    Serial.print (r);
-    Serial.print (", time=");
-    Serial.print (time_taken);
-    Serial.print ("\n");
-   }
-   else if (b == 'w') {
-     ticks += 1;
-     Serial.println(ticks);
-   }
-   else if (b == 'q') {
-     decrement_freq += 1;
-     Serial.println(decrement_freq);
-   }
-   else if (b == 's') {
-     ticks -= 1;
-     Serial.println(ticks);
-   }
-   else if (b == 'a') {
-     decrement_freq -= 1;
-     Serial.println(decrement_freq);
-   }
- }
+/*
+ * Main loop
+ */ 
+void loop(){
+  handle_diag_cmd();
+  if (triggered && !laser_on_override){
+    triggered = false;
+    // calc period for each face and time in us when the next face will come up
+    unsigned long face_period = us_per_rotation / 4;
+    unsigned long next_face = last_trigger + face_period;
+    // project the pixel on every single face
+    for (int i = 1; i <= num_faces; i++){
+      output_pixel(i);
+      if (i == 4){
+        break; 
+      }
+      while (micros() < next_face){     
+      }    
+      next_face = last_trigger + (face_period * (i + 1));
+    }
+  }
+  else if (laser_on_override){
+    digitalWrite(LASER_PIN, HIGH);
+  }
 }
+
+
+/***************************************************************
+ * DEBUGGING STUFF
+ ***************************************************************/
+
+
+/*
+ * Handle diag commands over Serial
+ */  
+void handle_diag_cmd() {
+  while (Serial.available() > 0) {
+    byte b = Serial.read();
+    if (b == 'r') {
+      Serial.print("Microseconds per rotation: ");
+      Serial.print(us_per_rotation);
+      Serial.print("\n");
+    }
+    if (b == 'i') {
+      Serial.print("Increasing ON duration.\n");
+      duration_on_us += 10;
+      Serial.print(duration_on_us);
+      Serial.print("\n");
+    }
+    if (b == 'd') {
+      Serial.print("Decreasing ON duration.\n");
+      if (duration_on_us != 0){
+        duration_on_us -= 10;
+        Serial.print(duration_on_us);
+        Serial.print("\n");
+      }
+    }
+    if (b == '.') {
+      Serial.print("Increasing number of faces.\n");
+      num_faces++;
+      Serial.print(num_faces);
+      Serial.print("\n");
+    }
+    if (b == ',') {
+      Serial.print("Decreasing number of faces.\n");
+      num_faces--;
+      Serial.print(num_faces);
+      Serial.print("\n");
+    }
+    if (b == ';') {
+      Serial.print("Stopping laser ON override.\n");
+      laser_on_override = false;
+    }
+    if (b == '\'') {
+      Serial.print("Starting laser ON override.\n");
+      laser_on_override = true;
+    }
+  }
+}
+
+
+
+
