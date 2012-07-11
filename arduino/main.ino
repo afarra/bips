@@ -1,11 +1,12 @@
-#define PAT_ROWS 4
-#define PAT_COLS 10
-#define FACES 4
+#include "images.h"
+
+#define FACES 6
 
 /*
  * Constant Decalaraion
  */
 const short DBG_LED_PIN = 13;
+const short BAZOOKA_PIN = 8;
 const short LASER1_PIN = 9;
 const short LASER2_PIN = 10;
 const short LASER3_PIN = 11;
@@ -15,50 +16,11 @@ const short IR_PIN = 2;
 int selected_face = 0;
 
 int offset_us = 14000;
-int face_offset[] = {13500, 14300, 15600, 17000};
+//int face_offset[] = {9500, 11100, 12500, 13800, 13800, 13800};
+int face_offset[] = {-800, -810, -930, -750, -830, -790};
+int face_toggle[] = {1, 1, 1, 1, 1, 1};
 
 int num_rotations = 0;
-
-const int pattern0[] = {0,0,0,0,0,0,0,0,0,0};
-const int pattern1[] = {1,1,1,1,1,1,1,1,1,1};
-const int pattern2[] = {1,0,1,0,1,0,1,0,1,0};
-const int pattern3[] = {0,1,0,1,0,1,0,1,0,1};
-const int pattern4[] = {1,1,0,1,1,0,1,1,0,1};
-
-const int pat_all[PAT_ROWS][PAT_COLS] = {
-{1,1,1,1,1,1,1,1,1,1},
-{1,1,1,1,1,1,1,1,1,1},
-{1,1,1,1,1,1,1,1,1,1},
-{1,1,1,1,1,1,1,1,1,1}
-};
-
-const int pat_i[PAT_ROWS][PAT_COLS] = {
-{0,0,1,1,1,1,1,1,0,0},
-{0,0,0,0,1,1,0,0,0,0},
-{0,0,0,0,1,1,0,0,0,0},
-{0,0,1,1,1,1,1,1,0,0}
-};
-
-const int pat_c[PAT_ROWS][PAT_COLS] = {
-{0,0,1,1,1,1,0,0,0,0},
-{0,0,1,0,0,0,0,0,0,0},
-{0,0,1,0,0,0,0,0,0,0},
-{0,0,1,1,1,1,0,0,0,0}
-};
-
-const int pat_o[PAT_ROWS][PAT_COLS] = {
-{0,0,1,1,1,1,1,0,0,0},
-{0,0,1,0,0,0,1,0,0,0},
-{0,0,1,0,0,0,1,0,0,0},
-{0,0,1,1,1,1,1,0,0,0}
-};
-
-const int pat_l[PAT_ROWS][PAT_COLS] = {
-{0,0,0,0,0,1,0,0,0,0},
-{0,0,0,0,0,1,0,0,0,0},
-{0,0,0,0,0,1,0,0,0,0},
-{0,0,0,0,0,1,1,1,1,0}
-};
 
 /*
  * Globals used in ISR
@@ -70,9 +32,9 @@ volatile boolean triggered = false;
 /*
  * Other Globals
  */
-unsigned int duration_on_us = 80;
-unsigned int duration_off_us = 80;
-short num_faces = 4;
+unsigned int duration_on_us = 30;
+unsigned int duration_off_us = 10;
+short num_faces = 6;
 // Debugging globals
 boolean laser_on_override = false;
 boolean ir_debug = false;
@@ -82,6 +44,7 @@ boolean dbg_led_state = false;
  * Board Setup
  */ 
 void setup(){
+  pinMode(BAZOOKA_PIN, OUTPUT);
   pinMode(LASER1_PIN, OUTPUT);
   pinMode(LASER2_PIN, OUTPUT);
   pinMode(LASER3_PIN, OUTPUT);
@@ -145,28 +108,23 @@ void loop(){
     triggered = false;
     num_rotations++;
     // calc period for each face and time in us when the next face will come up
-    unsigned long face_period = us_per_rotation / 4;
+    unsigned long face_period = us_per_rotation / FACES;
     // project the pixel on every single face
     unsigned long last_trig = last_trigger;
     for (int i = 0; i < num_faces; i++){
       unsigned long next_face = last_trig + (face_period * (i + 1)) + face_offset[i];
       while (micros() < next_face){
       }
-//      Serial.print("Starting Face#: ");
-//      Serial.print(i);
-//      Serial.print("\n");
-      if (i==3)
-        output_pixel(pat_c, PAT_ROWS, PAT_COLS);
-      if (i==2 || i==1)
-        output_pixel(pat_o, PAT_ROWS, PAT_COLS);
-      if (i==0)
-        output_pixel(pat_l, PAT_ROWS, PAT_COLS);
+      if (face_toggle[i]) {
+        output_pixel(pat_cool, PAT_ROWS, PAT_COLS);
+      }
       if (i == FACES){
         break; 
       }
     }
   }
   else if (laser_on_override){
+    digitalWrite(BAZOOKA_PIN, HIGH);
     digitalWrite(LASER1_PIN, HIGH);
     digitalWrite(LASER2_PIN, HIGH);
     digitalWrite(LASER3_PIN, HIGH);
@@ -236,6 +194,7 @@ void handle_diag_cmd() {
     else if (b == ';') {
       Serial.print("Stopping laser ON override.\n");
       laser_on_override = false;
+      digitalWrite(BAZOOKA_PIN, LOW);
     }
     else if (b == '\'') {
       Serial.print("Starting laser ON override.\n");
@@ -265,21 +224,60 @@ void handle_diag_cmd() {
       Serial.println("Selected face #4");
       selected_face = 3;
     }
-    else if (b == '=') {
-      Serial.print("Increasing Offset for face #");
-      Serial.print(selected_face+1);
+    else if (b == '5') {
+      Serial.println("Selected face #5");
+      selected_face = 4;
+    }
+    else if (b == '6') {
+      Serial.println("Selected face #6");
+      selected_face = 5;
+    }
+    else if (b == 't') {
+      face_toggle[selected_face] = !face_toggle[selected_face];
+      Serial.print("Face Toggled");
       Serial.print("\n");
-      face_offset[selected_face] += 100;
-      Serial.print(face_offset[selected_face]);
+      for (int i = 0; i < FACES; i++) {
+        Serial.print(face_toggle[i]);
+        Serial.print(", ");
+      }
       Serial.print("\n");
     }
     else if (b == '-') {
-      Serial.print("Decreasing Offset for face #");
+      Serial.print("Increasing Offset for face #");
       Serial.print(selected_face+1);
       Serial.print("\n");
-      face_offset[selected_face] -= 100;
+      face_offset[selected_face] += 2;
       Serial.print(face_offset[selected_face]);
+      Serial.print("\n");
+    }
+    else if (b == '+') {
+      Serial.print("Decreasing Offset for face #");
+      Serial.print(selected_face+1);                            
+      Serial.print("\n");
+      face_offset[selected_face] -= 2;
+      Serial.print(face_offset[selected_face]);
+      Serial.print("\n");
+    }
+    else if (b == '9') {
+      Serial.print("Increasing Offset for all faces");
+      Serial.print("\n");
+      for (int i = 0; i < FACES; i++) {
+        face_offset[i] += 100;
+        Serial.print(face_offset[i]);
+        Serial.print(", ");
+      }
+      Serial.print("\n");
+    }
+    else if (b == '0') {
+      Serial.print("Decreasing Offset for all faces");
+      Serial.print("\n");
+      for (int i = 0; i < FACES; i++) {
+        face_offset[i] -= 100;
+        Serial.print(face_offset[i]);
+        Serial.print(", ");
+      }
       Serial.print("\n");
     }
   }
 }
+
