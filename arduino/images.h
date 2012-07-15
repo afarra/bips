@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #define PAT_ROWS 8
 #define PAT_COLS 20
 
@@ -56,3 +57,26 @@ const int pat_bips[PAT_ROWS][PAT_COLS] = {
 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 };
 
+ // uses five of the rows, 20 columns
+const byte pat_byte_bips[PAT_COLS] = {
+  B11111000,
+  B10101000,
+  B10101000,
+  B01010000,
+  B00000000,
+  B10001000,
+  B11111000,
+  B10001000,
+  B00000000,
+  B11111000,
+  B10100000,
+  B10100000,
+  B01000000,
+  B00000000,
+  B01000000,
+  B10101000,
+  B10101000,
+  B10101000,
+  B00010000,
+  B00000000,
+};
