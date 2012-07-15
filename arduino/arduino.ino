@@ -1,4 +1,5 @@
 #include "images.h"
+#include <SoftwareSerial.h>
 
 #define FACES 6
 
@@ -29,8 +30,11 @@ double face_offset[] = {-112.00, -112.80, -123.96, -109.28, -113.44, -111.68};
 boolean laser_on_override = false;
 boolean ir_debug = false;
 boolean dbg_led_state = false;
-int selected_face = 0;
+int selected_face = 6;
 unsigned int num_rotations = 0;
+
+// Serial setup for bluetooth
+SoftwareSerial mySerial(3, 4); //rx, tx
 
 // Board Setup
 void setup(){
@@ -42,6 +46,8 @@ void setup(){
   pinMode(DBG_LED_PIN, OUTPUT);
   attachInterrupt(0, handle_ir, FALLING);
   Serial.begin(9600);
+  // set the data rate for the SoftwareSerial port
+  mySerial.begin(9600);
 }
 
 // Infrared Sensor ISR
@@ -83,6 +89,13 @@ void output_pixel(const int pattern[PAT_ROWS][PAT_COLS], int rows, int cols, uns
   }
 }
 
+void perf_secondary_tasks(int task_num){
+  if (mySerial.available()) {
+    // say what you got:
+    Serial.println(mySerial.read(), DEC);
+  }
+}
+
 // Main loop
 void loop(){
   // Handle diag commands that were sent over the serial interface
@@ -101,15 +114,20 @@ void loop(){
     // project the pixel on every single face
     unsigned long last_trig = last_trigger;
     for (int i = 0; i < FACES; i++){
+      // debug
+      if (i != selected_face && selected_face != 6){
+        continue; 
+      }
       unsigned long next_face = last_trig + (face_period * (i + 1)) + (face_period * face_offset[i] / 1000);
 //      times[i+1] = next_face - micros();
+      
+      // Perform other tasks beetween faces
+      perf_secondary_tasks(i);
+      
       while (micros() < next_face){
       }
       if (face_toggle[i]) {
-        output_pixel(pat_bips, PAT_ROWS, PAT_COLS, face_period);
-      }
-      if (i == FACES){
-        break; 
+        output_pixel(pat_all, PAT_ROWS, PAT_COLS, face_period);
       }
     }
 //    times[7] = micros();
@@ -157,27 +175,27 @@ void handle_diag_cmd() {
       Serial.print("\n");
     }
     else if (b == '=') {
-//      Serial.print("Increasing ON duration.\n");
+      Serial.print("Increasing ON duration.\n");
       duration_on_us += 0.1;
-//      Serial.println(duration_on_us);
+      Serial.println(duration_on_us);
     }
     else if (b == '-') {
-//      Serial.print("Decreasing ON duration.\n");
+      Serial.print("Decreasing ON duration.\n");
       if (duration_on_us != 0){
         duration_on_us -= 0.1;
-//        Serial.println(duration_on_us);
+        Serial.println(duration_on_us);
       }
     }
-    else if (b == '0') {
-//      Serial.print("Increasing OFF duration.\n");
+    else if (b == '+') {
+      Serial.print("Increasing OFF duration.\n");
       duration_off_us += 0.1;
-//      Serial.println(duration_off_us);
+      Serial.println(duration_off_us);
     }
-    else if (b == '9') {
-//      Serial.print("Decreasing OFF duration.\n");
+    else if (b == '-') {
+      Serial.print("Decreasing OFF duration.\n");
       if (duration_off_us != 0){
         duration_off_us -= 0.1;
-//        Serial.println(duration_off_us);
+        Serial.println(duration_off_us);
       }
     }
     else if (b == ';') {
@@ -199,7 +217,7 @@ void handle_diag_cmd() {
     }
     
     //  ~~~~~~~~~~~~~~~~~~~~~~~   FACE SPECIFIC   ~~~~~~~~~~~~~~~~~~~~~~~
-    else if (b >= '1' && b <= '6') {
+    else if (b >= '1' && b <= '7') {
       selected_face = b-49;
       Serial.print("Selected face #");
       Serial.println(selected_face + 1);
@@ -214,34 +232,34 @@ void handle_diag_cmd() {
       Serial.print("\n");
     }
     else if (b == '[') {
-//      Serial.print("Increasing Offset for face #");
-//      Serial.println(selected_face+1);
+      Serial.print("Increasing Offset for face #");
+      Serial.println(selected_face+1);
       face_offset[selected_face] += 0.5;
-//      Serial.println(face_offset[selected_face]);
+      Serial.println(face_offset[selected_face]);
     }
     else if (b == ']') {
-//      Serial.print("Decreasing Offset for face #");
-//      Serial.println(selected_face+1);                            
+      Serial.print("Decreasing Offset for face #");
+      Serial.println(selected_face+1);                            
       face_offset[selected_face] -= 0.5;
-//      Serial.println(face_offset[selected_face]);
+      Serial.println(face_offset[selected_face]);
     }
     else if (b == ',') {
-//      Serial.println("Increasing Offset for all faces");
+      Serial.println("Increasing Offset for all faces ");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] += 10.0;
-//        Serial.print(face_offset[i]);
-//        Serial.print(", ");
+        Serial.print(face_offset[i]);
+        Serial.print(", ");
       }
-//      Serial.print("\n");
+      Serial.print("\n");
     }
     else if (b == '.') {
-//      Serial.println("Decreasing Offset for all faces");
+      Serial.println("Decreasing Offset for all faces ");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] -= 10.0;
-//        Serial.print(face_offset[i]);
-//        Serial.print(", ");
+        Serial.print(face_offset[i]);
+        Serial.print(", ");
       }
-//      Serial.print("\n");
+      Serial.print("\n");
     }
 //    else if (b == '0') {
 //      Serial.print("Increasing number of faces.\n");
