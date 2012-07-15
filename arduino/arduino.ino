@@ -5,11 +5,14 @@
 
 // Constant Decalaraion
 const short DBG_LED_PIN = 13;
-const short LASER0_PIN = 8;
-const short LASER1_PIN = 9;
-const short LASER2_PIN = 10;
-const short LASER3_PIN = 11;
-const short LASER4_PIN = 12;
+const short LASER0_PIN = 5;
+const short LASER1_PIN = 6;
+const short LASER2_PIN = 7;
+const short LASER3_PIN = 8;
+const short LASER4_PIN = 9;
+const short LASER5_PIN = 10;
+const short LASER6_PIN = 11;
+const short LASER7_PIN = 12;
 const short IR_PIN = 2;
 
 // Globals used in ISR
@@ -161,7 +164,7 @@ void loop(){
       while (micros() < next_face){
       }
       if (face_toggle[i]) {
-        output_pixel(pat_all, PAT_ROWS, PAT_COLS, face_period);
+        output_pixel(pat_cool, PAT_ROWS, PAT_COLS, face_period);
       }
     }
 //    times[7] = micros();
@@ -295,15 +298,5 @@ void handle_diag_cmd() {
       }
       Serial.print("\n");
     }
-//    else if (b == '0') {
-//      Serial.print("Increasing number of faces.\n");
-//        num_faces++;
-//        Serial.println(num_faces);
-//    }
-//    else if (b == '9') {
-//      Serial.print("Decreasing number of faces.\n");
-//        num_faces--;
-//        Serial.println(num_faces);
-//    }
   }
 }
