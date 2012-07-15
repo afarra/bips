@@ -38,6 +38,29 @@ unsigned int num_rotations = 0;
 
 // Serial setup for bluetooth
 SoftwareSerial mySerial(3, 4); //rx, tx
+byte image_buff[PAT_COLS] = {
+  B11111000,
+  B10101000,
+  B10101000,
+  B01010000,
+  B00000000,
+  B10001000,
+  B11111000,
+  B10001000,
+  B00000000,
+  B11111000,
+  B10100000,
+  B10100000,
+  B01000000,
+  B00000000,
+  B01000000,
+  B10101000,
+  B10101000,
+  B10101000,
+  B00010000,
+  B00000000,
+};
+short receive_byte_count = 0;
 
 // Board Setup
 void setup(){
@@ -127,9 +150,20 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
 }
 
 void perf_secondary_tasks(int task_num){
-  if (mySerial.available()) {
-    // say what you got:
-    Serial.println(mySerial.read(), DEC);
+  if (task_num == 0 || task_num == 2 || task_num == 4){
+    while (mySerial.available() > 0) {
+      byte read_data = mySerial.read();
+      Serial.print(read_data);
+      Serial.print("\t");
+      if (receive_byte_count > 3){
+        image_buff[receive_byte_count - 4] = read_data;
+      }
+      receive_byte_count++;
+      if (receive_byte_count == PAT_COLS + 4){
+        receive_byte_count = 0;
+        Serial.print("\n");
+      }
+    }
   }
 }
 
@@ -163,8 +197,14 @@ void loop(){
       
       while (micros() < next_face){
       }
+      
+      // skip this face if the task took to long (TODO)
+      //if (micros() > next_face + rotation_period / FACES / 10000){
+      //  continue; 
+      //}
+      
       if (face_toggle[i]) {
-        output_pixel(pat_cool, PAT_ROWS, PAT_COLS, face_period);
+        output_pixel_bips(image_buff, PAT_ROWS, PAT_COLS, face_period);
       }
     }
 //    times[7] = micros();
