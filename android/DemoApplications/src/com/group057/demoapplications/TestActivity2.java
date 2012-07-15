@@ -1,6 +1,7 @@
 package com.group057.demoapplications;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -18,10 +19,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Toast;
 import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.TextView;
 
 import com.group057.BipsService;
+import com.group057.R;
 
 public class TestActivity2 extends Activity {
 	// Debugging
@@ -42,6 +45,14 @@ public class TestActivity2 extends Activity {
 			(byte) 0x2a, (byte) 0x49, (byte) 0x08, (byte) 0x08, (byte) 0x08, 0,
 			0, 0, 0, 0, 0, 0, 0 };
 
+
+    // Intent request codes
+    private static final int REQUEST_ENABLE_BT = 1;
+    
+
+	// Local Bluetooth adapter
+	private BluetoothAdapter mBluetoothAdapter = null;
+	
 	/** Messenger for communicating with service. */
 	Messenger mService = null;
 	/** Flag indicating whether we have called bind on the service. */
@@ -66,6 +77,9 @@ public class TestActivity2 extends Activity {
 		if (D)
 			Log.e(TAG, "+++ ON CREATE +++");
 
+        // Get the local Bluetooth adapter
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        
 		// Set up the window layout
 		setContentView(R.layout.test_activity2);
 	}
@@ -75,24 +89,11 @@ public class TestActivity2 extends Activity {
 		super.onStart();
 		if (D)
 			Log.e(TAG, "++ ON START ++");
-
+        
 		mCallbackText = (TextView) findViewById(R.id.textView_callback);
 		mPriorityRadio = (RadioGroup) findViewById(R.id.radioGroup2);
 		mImageRadio = (RadioGroup) findViewById(R.id.radioGroup1);
 		mDurationText = (EditText) findViewById(R.id.editText1);
-
-		// Initialize radio group listener
-		mImageRadio.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-
-			public void onCheckedChanged(RadioGroup group, int checkedId) {
-				switch (checkedId) {
-				case 0:
-				case 1:
-				case 2:
-				case 3:
-				}
-			}
-		});
 
 		// Initialize the send image button with a listener that for click
 		// events
@@ -161,8 +162,18 @@ public class TestActivity2 extends Activity {
 		mSendButton = (Button) findViewById(R.id.button_service);
 		mSendButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				// Bind Bips
-				doBindService();
+		        // If BT is not on, request that it be enabled.
+		        // setupChat() will then be called during onActivityResult
+		        if (!mBluetoothAdapter.isEnabled()) {
+		            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+		            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+		        // Otherwise, setup the chat session
+		        } else {
+
+					// Bind Bips
+					doBindService();
+		        }
+		        
 				mSendImageButton.setEnabled(true);
 				mCancelAllButton.setEnabled(true);
 				mCancelCurrentButton.setEnabled(true);
@@ -320,5 +331,24 @@ public class TestActivity2 extends Activity {
 			return BipsService.API_HIGH_PRIORITY;
 		return BipsService.API_MEDIUM_PRIORITY;
 	}
+	
+
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(D) Log.d(TAG, "onActivityResult " + resultCode);
+        switch (requestCode) {
+        case REQUEST_ENABLE_BT:
+            // When the request to enable Bluetooth returns
+            if (resultCode == Activity.RESULT_OK) {
+                // Bluetooth is now enabled, so set up a chat session
+                doBindService();
+            } else {
+                // User did not enable Bluetooth or an error occurred
+                Log.d(TAG, "BT not enabled");
+                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+	
+	
 }
 

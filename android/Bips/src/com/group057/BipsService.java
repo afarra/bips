@@ -320,7 +320,21 @@ public class BipsService extends Service {
 			stopSelf();
 			return;
 		}
+		
+		// initialize the priority queues
+		for (int i = 0; i < mImageQueue.length; i++) {
+			mImageQueue[i] = new ArrayList<BipsImage>();
+		}
+		// Initialize the BluetoothChatService to perform bluetooth connections
+		mChatService = new BluetoothChatService(this, mMessenger);
 
+		// Get the paired device.
+		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
+		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		startActivity(deviceIntent);
+		
+		setupChat();
+		/* This is handled by 3rd party now
 		// If BT is not on, request that it be enabled.
 		// setupChat() will then be called during onActivityResult
 		if (!mBluetoothAdapter.isEnabled()) {
@@ -330,6 +344,7 @@ public class BipsService extends Service {
 			startActivity(enableIntent);
 			// Otherwise, setup the chat session
 		}
+		
 
 		// TODO: This does not properly get launched if BT needed to be enabled.
 		if (mBluetoothAdapter.isEnabled()) {
@@ -337,6 +352,9 @@ public class BipsService extends Service {
 			if (mChatService == null)
 				setupChat();
 		}
+		*/
+		
+		
 	}
 
 	@Override
@@ -353,6 +371,8 @@ public class BipsService extends Service {
 
 		// flag the service as destroyed for threads to detect and stop themselves
 		mIsDestroyed = true;
+		
+		// TODO Remove mHandler callbacks
 		
 		// Tell the user we stopped.
 		Toast.makeText(this, R.string.remote_service_stopped,
@@ -433,7 +453,7 @@ public class BipsService extends Service {
 
 	private void setupChat() {
 		Log.d(TAG, "setupChat()");
-
+		/*
 		// initialize the priority queues
 		for (int i = 0; i < mImageQueue.length; i++) {
 			mImageQueue[i] = new ArrayList<BipsImage>();
@@ -444,7 +464,7 @@ public class BipsService extends Service {
 
 		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
 		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(deviceIntent);
+		startActivity(deviceIntent);*/
 		
 		
 		

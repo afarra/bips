@@ -43,6 +43,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * This Activity appears as a dialog. It lists any paired devices and
@@ -54,7 +55,7 @@ public class DeviceListActivity extends Activity {
     // Debugging
     private static final String TAG = "DeviceListActivity";
     private static final boolean D = true;
-
+    
     // Return Intent extra
     public static String EXTRA_DEVICE_ADDRESS = "device_address";
     
@@ -217,7 +218,9 @@ public class DeviceListActivity extends Activity {
                     mNewDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
                 }
             // When discovery is finished, change the Activity title
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+            } 
+            else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) 
+            {
                 setProgressBarIndeterminateVisibility(false);
                 setTitle(R.string.select_device);
                 if (mNewDevicesArrayAdapter.getCount() == 0) {
