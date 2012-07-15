@@ -1,6 +1,7 @@
-package com.group057.demoapplications;
+package com.othercompany2.demoapplications2;
 
 import com.group057.BipsService;
+
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;

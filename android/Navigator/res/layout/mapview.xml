@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AbsoluteLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+    <com.google.android.maps.MapView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/mapview"
+        android:layout_width="318dp"
+        android:layout_height="400dp"
+        android:layout_x="1dp"
+        android:layout_y="1dp"
+        android:apiKey="0sRoZd5lZbFJSZetsNgxdwclLC7cFidoa8OqYgw"
+        android:clickable="true" >
+
+    </com.google.android.maps.MapView>
+
+    <Button
+        android:id="@+id/setDirection"
+        android:layout_width="66dp"
+        android:layout_height="wrap_content"
+        android:layout_x="120dp"
+        android:layout_y="418dp"
+        android:text="@android:string/ok" />
+
+</AbsoluteLayout>
+

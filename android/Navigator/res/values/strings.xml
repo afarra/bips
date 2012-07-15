@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, NavigatorActivity!</string>
+    <string name="app_name">Navigator</string>
+    <string name="To_label">To:</string>
+    <string name="setDestination">Set Destination</string>
+
+</resources>
