@@ -10,7 +10,8 @@ public class Step {
 	private GeoPoint end;
 	private String instructions;
 	private Arrow currentArrow;
-	
+
+
 	public static enum Arrow {NONE, LEFT, RIGHT}; // Left, Right *Demo Only*
 
 	public Step() {
@@ -34,6 +35,11 @@ public class Step {
 		} else {
 			this.currentArrow = Arrow.NONE;
 		}
+	}
+	
+	
+	public Arrow getCurrentArrow() {
+		return currentArrow;
 	}
 	
 	public float getDistance() {

@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-sdk android:minSdkVersion="10" />
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION" />
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -25,6 +28,14 @@
         <activity android:name="DestinationActivity"
                   android:screenOrientation="portrait">
         </activity>
+         <activity
+            android:name="com.group057.DeviceListActivity"
+            android:configChanges="orientation|keyboardHidden" />
+        <service
+            android:name="com.group057.BipsService"
+            android:label="BIPS Service"
+            android:process=":remote" >
+        </service>
     </application>
 
 </manifest>
