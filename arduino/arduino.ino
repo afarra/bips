@@ -13,6 +13,8 @@ const short LASER4_PIN = 9;
 const short LASER5_PIN = 10;
 const short LASER6_PIN = 11;
 const short LASER7_PIN = 12;
+const short TILT1_PIN = 3;    // x direction
+const short TILT2_PIN = 4;    // y direction
 const short IR_PIN = 2;
 
 // Globals used in ISR
@@ -64,6 +66,9 @@ short receive_byte_count = 0;
 unsigned long image_time = (unsigned long) -1;
 unsigned int image_time_buffer = 0;
 
+// Tilt sensing flag
+boolean tilt_detected = false;
+
 // Board Setup
 void setup(){
   pinMode(LASER0_PIN, OUTPUT);
@@ -71,6 +76,11 @@ void setup(){
   pinMode(LASER2_PIN, OUTPUT);
   pinMode(LASER3_PIN, OUTPUT);
   pinMode(LASER4_PIN, OUTPUT);
+  pinMode(LASER5_PIN, OUTPUT);
+  pinMode(LASER6_PIN, OUTPUT);
+  pinMode(LASER7_PIN, OUTPUT);
+  pinMode(TILT1_PIN, INPUT);
+  pinMode(TILT2_PIN, INPUT);
   pinMode(DBG_LED_PIN, OUTPUT);
   attachInterrupt(0, handle_ir, FALLING);
   Serial.begin(9600);
@@ -155,6 +165,20 @@ void perf_secondary_tasks(int task_num){
   // perform tilt check
   if (task_num == 5)
   { 
+    // variables to read the pulse widths:
+    int p1, p2;
+    p1 = digitalRead(TILT1_PIN);
+    p2 = digitalRead(TILT2_PIN);
+    
+    // is not in 'A' position (bad)
+    if (p1 == 1 || p2 == 1)
+    {
+      tilt_detected = true;
+    }
+    else
+    {
+      tilt_detected = false;
+    }
   }
 
 }
@@ -193,10 +217,13 @@ void loop(){
       
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
-        if (image_time < millis()){
+        // or if a tilt is detected
+        if (image_time < millis() || tilt_detected)
+        {
           output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
         }
-        else{
+        else
+        {
           output_pixel_bips(image_buff, PAT_ROWS, PAT_COLS, face_period);
         }
       }
@@ -208,6 +235,9 @@ void loop(){
     digitalWrite(LASER2_PIN, HIGH);
     digitalWrite(LASER3_PIN, HIGH);
     digitalWrite(LASER4_PIN, HIGH);
+    digitalWrite(LASER5_PIN, HIGH);
+    digitalWrite(LASER6_PIN, HIGH);
+    digitalWrite(LASER7_PIN, HIGH);
   }
 }
 
