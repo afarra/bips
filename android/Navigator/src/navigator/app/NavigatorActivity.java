@@ -44,16 +44,18 @@ public class NavigatorActivity extends Activity{
 	private Button setDestination;
 	private Button getDirections;
 	private EditText directions;
-	private List<Step> steps;
+	private LinkedList<Step> steps;
 	private LocationManager locationManager;
 	private LocationProvider locationProvider;
     private static final int TWO_MINUTES = 1000 * 60 * 2;
+    private static final int THIRTY_SEC = 1000* 30;
 	private boolean running = false;
 	private Location currentBestLocation = null;
 	private static final int DESINATION_SELECTION=0;
 	private GeoPoint to = null;
 	private Thread turnByturn;
 	private Thread retrieveDirections;
+	static boolean  reCalcDist = true;
 	
 	private String directionsString = "";
 	
@@ -81,6 +83,7 @@ public class NavigatorActivity extends Activity{
             public void onLocationChanged(Location location) {
             	if (isBetterLocation(location, currentBestLocation)) {
             		currentBestLocation = location;
+            		reCalcDist = true;
             	}
             	              
             }
@@ -115,8 +118,8 @@ public class NavigatorActivity extends Activity{
 
         // Check whether the new location fix is newer or older
         long timeDelta = location.getTime() - currentBestLocation.getTime();
-        boolean isSignificantlyNewer = timeDelta > TWO_MINUTES;
-        boolean isSignificantlyOlder = timeDelta < -TWO_MINUTES;
+        boolean isSignificantlyNewer = timeDelta > THIRTY_SEC;
+        boolean isSignificantlyOlder = timeDelta < -THIRTY_SEC;
         boolean isNewer = timeDelta > 0;
 
         // If it's been more than two minutes since the current location, use the new location
@@ -131,7 +134,7 @@ public class NavigatorActivity extends Activity{
         // Check whether the new location fix is more or less accurate
         int accuracyDelta = (int) (location.getAccuracy() - currentBestLocation.getAccuracy());
         boolean isLessAccurate = accuracyDelta > 0;
-        boolean isMoreAccurate = accuracyDelta < 0;
+        boolean isMoreAccurate = accuracyDelta <= 0; //For demo purposes = case is included
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
 
         // Check if the old and new location are from the same provider
@@ -158,20 +161,62 @@ public class NavigatorActivity extends Activity{
     }
     
     
+    /**
+     * 
+     */
     private void startApplication() {
-    	Step s = ((LinkedList<Step>)this.steps).pop();
+    	
+    	Step s = steps.pop(); //First Step
+    	Step upComingStep = steps.getFirst();
+    	
+    	boolean reCalcDest = true;
+    	Location destination = new Location("Destination");
+    	float distance = -1;
     	while(running) {
-    		
-    		double distanceLat = s.getEnd().getLatitudeE6() - currentBestLocation.getLatitude()*1E6;
-    		double distanceLong = s.getEnd().getLongitudeE6() - currentBestLocation.getLongitude()*1E6;
-    		
-    		if(distanceLat < 10 && distanceLat > -10 && distanceLong > 10 && distanceLong < -10) {
-    			directions.setText(s.getInstructions());
+    
+    		if( reCalcDest ) {
+    			destination.setLongitude(s.getEnd().getLongitudeE6()/1E6);
+    			destination.setLatitude(s.getEnd().getLatitudeE6()/1E6);
+    			reCalcDest = false;
     		}
+    		
+    		if ( reCalcDist ) {
+    			distance = currentBestLocation.distanceTo(destination);
+    			reCalcDist = false;
+    		}
+    		
+    		if( distance < 30 ) {
+    			//Send Information to BIPS//
+    			directionsString = upComingStep.toString(distance);
+    	    	runOnUiThread(new Runnable(){
+    				public void run() {
+    					updateDirections();
+    				}
+    	    	});
+    			if(distance < 5) {
+    				s = steps.pop();
+    				if (steps.size() != 0) {
+	    				upComingStep = steps.getFirst();
+	    				reCalcDest = true;
+	    				reCalcDist = true;
+    				} else {
+    					running = false;
+    					directionsString += "\n Finish";
+    	    	    	runOnUiThread(new Runnable(){
+    	    				public void run() {
+    	    					updateDirections();
+    	    				}
+    	    	    	});
+    				}
+    			}
+    		}
+    		
+    		
     		
     	}
     	
     }
+    
     
     private void updateDirections() {
     	directions.setText(directionsString);
@@ -312,7 +357,7 @@ public class NavigatorActivity extends Activity{
 
 
 class StepsParserCallBacks extends DefaultHandler {
-	private List<Step> lst;
+	private LinkedList<Step> lst;
 	
 	private String tmpVal;
 	private String tmpVal2;
@@ -332,7 +377,7 @@ class StepsParserCallBacks extends DefaultHandler {
 	private boolean instr = false;
 	
 	
-	public StepsParserCallBacks(List<Step> lst) {
+	public StepsParserCallBacks(LinkedList<Step> lst) {
 		this.lst = lst;
 	}
 	

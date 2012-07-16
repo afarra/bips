@@ -34,7 +34,7 @@ public class DestinationActivity extends MapActivity{
         mapView.setBuiltInZoomControls(true);
         
         Bundle b = this.getIntent().getExtras();
-        selectedDestination = new Intent();
+        selectedDestination = new Intent(); 
         
         List<Overlay> mapOverlays = mapView.getOverlays();
         Drawable drawable = this.getResources().getDrawable(R.drawable.map_marker);
@@ -56,15 +56,17 @@ public class DestinationActivity extends MapActivity{
             //set result with our selectedColor intent and RESULT_OK request code\
         	GeoPoint destination = itemizedoverlay.getDestination();
             
-        	Bundle bundle = new Bundle();
-            bundle.putInt("destLat", destination.getLatitudeE6());
-            bundle.putInt("destLong", destination.getLongitudeE6());
-            
-            selectedDestination.putExtras(bundle);
-            
-            setResult(RESULT_OK, selectedDestination);
-            //then finish the activity
-            finish();
+        	if( destination != null) {
+	        	Bundle bundle = new Bundle();
+	            bundle.putInt("destLat", destination.getLatitudeE6());
+	            bundle.putInt("destLong", destination.getLongitudeE6());
+	            
+	            selectedDestination.putExtras(bundle);
+	            
+	            setResult(RESULT_OK, selectedDestination);
+	            //then finish the activity
+	            finish();
+        	}
         }
      };
     
