@@ -434,8 +434,8 @@ public class BipsService extends Service {
 			// Get the message bytes and tell the BluetoothChatService to write
 			byte[] byteTime = ByteBuffer.allocate(4).putInt(message.time)
 					.array();
-			mChatService.write(byteTime);
 			mChatService.write(message.pixelArray);
+			mChatService.write(byteTime);
 
 			// still need to write the priority, time, etc.
 		}

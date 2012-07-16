@@ -35,8 +35,8 @@ public class TestActivity2 extends Activity {
 	private static final byte[] up = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
 		(byte) 0x60, (byte) 0xff, (byte) 0x60, (byte) 0x20, 0, 0, 0, 0, 0,
 		0, 0, 0 };
-	private static final byte[] down = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x40,
-			(byte) 0x30, (byte) 0xff, (byte) 0x30, (byte) 0x40, 0, 0, 0, 0, 0,
+	private static final byte[] down = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
+			(byte) 0x30, (byte) 0xff, (byte) 0x30, (byte) 0x20, 0, 0, 0, 0, 0,
 			0, 0, 0 };
 	private static final byte[] right = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
 			(byte) 0x20, (byte) 0x20, (byte) 0xf8, (byte) 0x70, (byte) 0x20, 0,
