@@ -90,35 +90,7 @@ void handle_ir(){
   }
 }
 
-// Output an array of pixels.
-void output_pixel(const int pattern[PAT_ROWS][PAT_COLS], int rows, int cols, unsigned long period){
-  unsigned long delay_off = duration_off_us * period / 1000;
-  unsigned long delay_on = duration_on_us * period / 1000;
-  
-  if ((delay_off + delay_on) * cols > period) {
-    return;
-  }
-  
-  for (int col = cols-1; col >= 0; col--) {
-    if (col != cols-1) {
-      delayMicroseconds(delay_off);
-    }
-    digitalWrite(LASER0_PIN, pattern[0][col]);
-    digitalWrite(LASER1_PIN, pattern[1][col]);
-    digitalWrite(LASER2_PIN, pattern[2][col]);
-    digitalWrite(LASER3_PIN, pattern[3][col]);
-    digitalWrite(LASER4_PIN, pattern[4][col]);
-    delayMicroseconds(delay_on);
-    digitalWrite(LASER0_PIN, LOW);
-    digitalWrite(LASER1_PIN, LOW);
-    digitalWrite(LASER2_PIN, LOW);
-    digitalWrite(LASER3_PIN, LOW);
-    digitalWrite(LASER4_PIN, LOW);
-  }
-}
-
 // Output an array of pixels from a BIPS image format
-// (first four bytes are the time, then the next 20 bytes are the columns)
 void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigned long period){
   unsigned long delay_off = duration_off_us * period / 1000;
   unsigned long delay_on = duration_on_us * period / 1000;
@@ -151,6 +123,8 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
   }
 }
 
+// Perform secondary tasks during the time that's available between the 
+// laser projections.
 void perf_secondary_tasks(int task_num){
   if (task_num == 0 || task_num == 2 || task_num == 4){
     while (mySerial.available() > 0) {
@@ -160,22 +134,20 @@ void perf_secondary_tasks(int task_num){
       if (receive_byte_count < PAT_COLS){
         image_buff[receive_byte_count] = read_data;
       }
-      else
-      {
+      else{
         image_time_buffer = image_time_buffer << 8;
         image_time_buffer += read_data;
       }
-      
-      receive_byte_count++;
-      
-      if (receive_byte_count >= PAT_COLS + 3)
-      {
+      if (receive_byte_count >= PAT_COLS + 3){
         Serial.print("\n");
         Serial.print(image_time_buffer);
         Serial.print("\n");
         image_time = image_time_buffer + millis();
         image_time_buffer = 0;
         receive_byte_count = 0;
+      }  
+      else{
+        receive_byte_count++;
       }
     }
   }
@@ -198,19 +170,15 @@ void loop(){
     
     // calc period for each face and time in us when the next face will come up
     unsigned long face_period = rotation_period / FACES;
-    
-//    long times[8];
-//    times[0] = micros();
 
     // project the pixel on every single face
     unsigned long last_trig = last_trigger;
     for (int i = 0; i < FACES; i++){
       // debug
       if (i != selected_face && selected_face != 6){
-        continue; 
+        continue;
       }
       unsigned long next_face = last_trig + (face_period * (i + 1)) + (face_period * face_offset[i] / 1000);
-//      times[i+1] = next_face - micros();
       
       // Perform other tasks beetween faces
       perf_secondary_tasks(i);
@@ -225,22 +193,14 @@ void loop(){
       
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
-        // if (image_time < millis())
-        // {
-          // output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
-        // }
-        // else
-        {
+        if (image_time < millis()){
+          output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
+        }
+        else{
           output_pixel_bips(image_buff, PAT_ROWS, PAT_COLS, face_period);
         }
       }
     }
-//    times[7] = micros();
-//    if (num_rotations % 50 == 0) {
-//      Serial.println("#####################################");
-//      for (int i = 0; i < 8; i++)
-//        Serial.println(times[i]);
-//    }
   }
   else if (laser_on_override){
     digitalWrite(LASER0_PIN, HIGH);
