@@ -39,26 +39,26 @@ unsigned int num_rotations = 0;
 // Serial setup for bluetooth
 SoftwareSerial mySerial(3, 4); //rx, tx
 byte image_buff[PAT_COLS] = {
-  B11111000,
-  B10101000,
-  B10101000,
-  B01010000,
-  B00000000,
-  B10001000,
+  B01110111,
   B11111000,
   B10001000,
+  B10001000,
+  B10001000,
+  B10001000,
+  B11111000,
+  B01110000,
+  B00000000,
+  B00000000,
   B00000000,
   B11111000,
-  B10100000,
-  B10100000,
+  B11111000,
   B01000000,
-  B00000000,
   B01000000,
-  B10101000,
-  B10101000,
-  B10101000,
+  B00100000,
+  B00100000,
   B00010000,
-  B00000000,
+  B11111000,
+  B11111000,
 };
 short receive_byte_count = 0;
 unsigned long image_time = (unsigned long) -1;
@@ -162,21 +162,22 @@ void perf_secondary_tasks(int task_num){
       }
       else
       {
-        image_time_buffer << 8;
+        image_time_buffer = image_time_buffer << 8;
         image_time_buffer += read_data;
-        if (receive_byte_count == PAT_COLS + 3)
-        {
-          Serial.print("\n");
-          Serial.print(image_time_buffer);
-          Serial.print("\n");
-          image_time = image_time_buffer + millis();
-          image_time_buffer = 0;
-          receive_byte_count = 0;
-        }
       }
+      
       receive_byte_count++;
+      
+      if (receive_byte_count >= PAT_COLS + 3)
+      {
+        Serial.print("\n");
+        Serial.print(image_time_buffer);
+        Serial.print("\n");
+        image_time = image_time_buffer + millis();
+        image_time_buffer = 0;
+        receive_byte_count = 0;
+      }
     }
-    
   }
   
   // perform tilt check
@@ -224,11 +225,11 @@ void loop(){
       
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
-        if (image_time < millis())
-        {
-          output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
-        }
-        else
+        // if (image_time < millis())
+        // {
+          // output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
+        // }
+        // else
         {
           output_pixel_bips(image_buff, PAT_ROWS, PAT_COLS, face_period);
         }
