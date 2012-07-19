@@ -31,33 +31,24 @@ public class MockLocationProvider extends Thread {
         for (String str : data) {
 
             try {
-
-                Thread.sleep(1000);
-
-            } catch (InterruptedException e) {
-
-                e.printStackTrace();
-            }
-
-            // Set one position
-            String[] parts = str.split(",");
-            Double latitude = Double.valueOf(parts[0]);
-            Double longitude = Double.valueOf(parts[1]);
-            Long time = Long.valueOf(parts[2])*1000;
-            elapsedTime+=time;
-            //Double altitude = Double.valueOf(parts[2]);
-            Location location = new Location(mocLocationProvider);
-            location.setLatitude(latitude);
-            location.setLongitude(longitude);
-            location.setTime(elapsedTime);
-            //location.setAltitude(altitude);
-            try {
-				this.sleep(time);
+				this.sleep(5000);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-            Log.e(LOG_TAG, location.toString());
+        	
+            // Set one position
+            String[] parts = str.split(",");
+            Double latitude = Double.valueOf(parts[0]);
+            Double longitude = Double.valueOf(parts[1]);
+            //Long time = Long.valueOf(parts[2])*1000;
+            elapsedTime+=5000;
+            //Double altitude = Double.valueOf(parts[2]);
+            Location location = new Location(mocLocationProvider);
+            location.setLatitude(latitude);
+            location.setLongitude(longitude);
+            location.setTime(System.currentTimeMillis());
+            //location.setAltitude(altitude);
 
             // set the time in the location. If the time on this location
             // matches the time on the one in the previous set call, it will be
@@ -66,6 +57,7 @@ public class MockLocationProvider extends Thread {
 
             locationManager.setTestProviderLocation(mocLocationProvider,
                     location);
+            Log.e(LOG_TAG, location.toString());
         }
     }
 }
