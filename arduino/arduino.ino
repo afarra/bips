@@ -2,19 +2,22 @@
 #include <SoftwareSerial.h>
 
 #define FACES 6
+#define DEBUG false
 
 // Constant Decalaraion
 const short DBG_LED_PIN = 13;
-const short LASER0_PIN = 5;
-const short LASER1_PIN = 6;
-const short LASER2_PIN = 7;
-const short LASER3_PIN = 8;
-const short LASER4_PIN = 9;
-const short LASER5_PIN = 10;
-const short LASER6_PIN = 11;
-const short LASER7_PIN = 12;
-const short TILT1_PIN = 3;    // x direction
-const short TILT2_PIN = 4;    // y direction
+const short LASER0_PIN = 3;
+const short LASER1_PIN = 4;
+const short LASER2_PIN = 5;
+const short LASER3_PIN = 6;
+const short LASER4_PIN = 7;
+//const short LASER5_PIN = 10;
+//const short LASER6_PIN = 11;
+//const short LASER7_PIN = 12;
+const short BT_RX = 9;
+const short BT_TX = 10;
+const short TILT1_PIN = 11;    // x direction
+const short TILT2_PIN = 12;    // y direction
 const short IR_PIN = 2;
 
 // Globals used in ISR
@@ -23,10 +26,10 @@ volatile unsigned long last_trigger = 0;
 volatile boolean triggered = false;
 
 // Calibration globals
-double duration_on_us = 6.20;
-double duration_off_us = 0.80;
+double duration_on_us = 5.10;
+double duration_off_us = 2.70;
 boolean face_toggle[] = {true, true, true, true, true, true};
-double face_offset[] = {-112.00, -112.80, -123.96, -109.28, -113.44, -111.68};
+double face_offset[] = {-90.00, -93.00, -89.00, -96.00, -90.00, -90.50};
 // HIGH SPEED (50k us) {-122.00, -122.80, -133.96, -119.28, -123.44, -121.68};
 // NORM SPEED (75k us) {-112.00, -112.80, -123.96, -109.28, -113.44, -111.68};
 // LOW SPEED (100k us) {-102.00, -102.80, -113.96, -99.28, -103.44, -101.68};
@@ -39,7 +42,7 @@ int selected_face = 6;
 unsigned int num_rotations = 0;
 
 // Serial setup for bluetooth
-SoftwareSerial mySerial(3, 4); //rx, tx
+SoftwareSerial mySerial(BT_RX, BT_TX); //rx, tx
 byte image_buff[PAT_COLS] = {
   B01110111,
   B11111000,
@@ -76,9 +79,9 @@ void setup(){
   pinMode(LASER2_PIN, OUTPUT);
   pinMode(LASER3_PIN, OUTPUT);
   pinMode(LASER4_PIN, OUTPUT);
-  pinMode(LASER5_PIN, OUTPUT);
-  pinMode(LASER6_PIN, OUTPUT);
-  pinMode(LASER7_PIN, OUTPUT);
+//  pinMode(LASER5_PIN, OUTPUT);
+//  pinMode(LASER6_PIN, OUTPUT);
+//  pinMode(LASER7_PIN, OUTPUT);
   pinMode(TILT1_PIN, INPUT);
   pinMode(TILT2_PIN, INPUT);
   pinMode(DBG_LED_PIN, OUTPUT);
@@ -109,8 +112,8 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
     return;
   }
   
-  for (int col = cols-1; col >= 0; col--) {
-    if (col != cols-1) {
+  for (int col = 0; col < cols; col++) {
+    if (col != 0) {
       delayMicroseconds(delay_off);
     }
     digitalWrite(LASER0_PIN, pattern[col] & 128);	// binary 10000000
@@ -118,18 +121,18 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
     digitalWrite(LASER2_PIN, pattern[col] & 32);	// binary 00100000
     digitalWrite(LASER3_PIN, pattern[col] & 16);
     digitalWrite(LASER4_PIN, pattern[col] & 8);
-    digitalWrite(LASER5_PIN, pattern[col] & 4);
-    digitalWrite(LASER6_PIN, pattern[col] & 2);
-    digitalWrite(LASER7_PIN, pattern[col] & 1);
+//    digitalWrite(LASER5_PIN, pattern[col] & 4);
+//    digitalWrite(LASER6_PIN, pattern[col] & 2);
+//    digitalWrite(LASER7_PIN, pattern[col] & 1);
     delayMicroseconds(delay_on);
     digitalWrite(LASER0_PIN, LOW);
     digitalWrite(LASER1_PIN, LOW);
     digitalWrite(LASER2_PIN, LOW);
     digitalWrite(LASER3_PIN, LOW);
     digitalWrite(LASER4_PIN, LOW);
-    digitalWrite(LASER5_PIN, LOW);
-    digitalWrite(LASER6_PIN, LOW);
-    digitalWrite(LASER7_PIN, LOW);
+//    digitalWrite(LASER5_PIN, LOW);
+//    digitalWrite(LASER6_PIN, LOW);
+//    digitalWrite(LASER7_PIN, LOW);
   }
 }
 
@@ -139,8 +142,10 @@ void perf_secondary_tasks(int task_num){
   if (task_num == 0 || task_num == 2 || task_num == 4){
     while (mySerial.available() > 0) {
       byte read_data = mySerial.read();
-      Serial.print(read_data);
-      Serial.print("\t");
+      if (DEBUG){
+        Serial.print(read_data);
+        Serial.print("\t");
+      }
       if (receive_byte_count < PAT_COLS){
         image_buff[receive_byte_count] = read_data;
       }
@@ -149,9 +154,11 @@ void perf_secondary_tasks(int task_num){
         image_time_buffer += read_data;
       }
       if (receive_byte_count >= PAT_COLS + 3){
-        Serial.print("\n");
-        Serial.print(image_time_buffer);
-        Serial.print("\n");
+        if (DEBUG){
+          Serial.print("\n");
+          Serial.print(image_time_buffer);
+          Serial.print("\n");
+        }
         image_time = image_time_buffer + millis();
         image_time_buffer = 0;
         receive_byte_count = 0;
@@ -218,7 +225,7 @@ void loop(){
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
         // or if a tilt is detected
-        if (image_time < millis() || tilt_detected)
+        if (image_time < millis() /*|| tilt_detected*/)
         {
           output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
         }
@@ -235,9 +242,9 @@ void loop(){
     digitalWrite(LASER2_PIN, HIGH);
     digitalWrite(LASER3_PIN, HIGH);
     digitalWrite(LASER4_PIN, HIGH);
-    digitalWrite(LASER5_PIN, HIGH);
-    digitalWrite(LASER6_PIN, HIGH);
-    digitalWrite(LASER7_PIN, HIGH);
+//    digitalWrite(LASER5_PIN, HIGH);
+//    digitalWrite(LASER6_PIN, HIGH);
+//    digitalWrite(LASER7_PIN, HIGH);
   }
 }
 
@@ -326,19 +333,19 @@ void handle_diag_cmd() {
       }
       Serial.print("\n");
     }
-    else if (b == '[') {
+    else if (b == ']') {
       Serial.print("Increasing Offset for face #");
       Serial.println(selected_face+1);
       face_offset[selected_face] += 0.5;
       Serial.println(face_offset[selected_face]);
     }
-    else if (b == ']') {
+    else if (b == '[') {
       Serial.print("Decreasing Offset for face #");
       Serial.println(selected_face+1);                            
       face_offset[selected_face] -= 0.5;
       Serial.println(face_offset[selected_face]);
     }
-    else if (b == ',') {
+    else if (b == '.') {
       Serial.println("Increasing Offset for all faces ");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] += 10.0;
@@ -347,7 +354,7 @@ void handle_diag_cmd() {
       }
       Serial.print("\n");
     }
-    else if (b == '.') {
+    else if (b == ',') {
       Serial.println("Decreasing Offset for all faces ");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] -= 10.0;
