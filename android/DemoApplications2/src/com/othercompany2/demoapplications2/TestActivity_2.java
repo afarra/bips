@@ -28,11 +28,25 @@ public class TestActivity_2 extends Activity {
     private static final boolean D = true;
 
     // Images to send
-    private static final byte [] up = {0, 0, 0, 0, 0, 0, 0, (byte)0x20, (byte)0x40, (byte)0x80, (byte)0x40, (byte)0x20, 0, 0, 0, 0, 0, 0, 0, 0};
-    private static final byte [] down = {0, 0, 0, 0, 0, 0, 0, (byte)0x04, (byte)0x02, (byte)0x80, (byte)0x02, (byte)0x04, 0, 0, 0, 0, 0, 0, 0, 0};
-    private static final byte [] right = {0, 0, 0, 0, 0, 0, (byte)0x8, (byte)0x8, (byte)0x49, (byte)0x2a, (byte)0x1c, (byte)0x08, 0, 0, 0, 0, 0, 0, 0, 0};
-    private static final byte [] left = {0, 0, 0, 0, 0, 0, (byte)0x1c, (byte)0x2a, (byte)0x49, (byte)0x08, (byte)0x08, (byte)0x08, 0, 0, 0, 0, 0, 0, 0, 0};
-    
+
+	private static final byte[] upWide = { (byte) 0x08, (byte) 0x08, (byte) 0x08, (byte) 0x18, 
+		(byte) 0x18, (byte) 0x18, (byte) 0x38, (byte) 0x38,
+		(byte) 0x38, (byte) 0x78, (byte) 0x78, (byte) 0x38, (byte) 0x38, (byte) 0x38, (byte) 0x18, (byte) 0x18, (byte) 0x18,
+		(byte) 0x08, (byte) 0x08, (byte) 0x08 };
+	private static final byte[] up = { 0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x18,
+		(byte) 0x38, (byte) 0x78, (byte) 0x38, (byte) 0x18, (byte) 0x08, 0, 0, 0, 0,
+		0, 0, 0 };
+	private static final byte[] down = { 0, 0, 0, 0, 0, 0, (byte) 0x80, (byte) 0xc0,
+			(byte) 0xe0, (byte) 0xf0, (byte) 0xe0, (byte) 0xc0,  (byte) 0x80, 0, 0, 0, 0,
+			0, 0, 0 };
+	private static final byte[] right = { (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x78, (byte) 0x78, (byte) 0x78, (byte) 0x30, (byte) 0x30, (byte) 0x30};
+	private static final byte[] left = { (byte) 0x30, (byte) 0x30, (byte) 0x78, (byte) 0x78, (byte) 0x78, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
     /** IRemoteService for communication with service (will replace Messenger) */
     IRemoteService mIRemoteService = null;
 	/** Messenger for communicating with service. */

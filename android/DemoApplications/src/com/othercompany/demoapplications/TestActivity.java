@@ -35,18 +35,24 @@ public class TestActivity extends Activity {
 	private static final boolean D = true;
 
 	// Images to send
-	private static final byte[] up = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x60, (byte) 0xff, (byte) 0x60, (byte) 0x20, 0, 0, 0, 0, 0,
+	private static final byte[] upWide = { (byte) 0x08, (byte) 0x08, (byte) 0x08, (byte) 0x18, 
+		(byte) 0x18, (byte) 0x18, (byte) 0x38, (byte) 0x38,
+		(byte) 0x38, (byte) 0x78, (byte) 0x78, (byte) 0x38, (byte) 0x38, (byte) 0x38, (byte) 0x18, (byte) 0x18, (byte) 0x18,
+		(byte) 0x08, (byte) 0x08, (byte) 0x08 };
+	private static final byte[] up = { 0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x18,
+		(byte) 0x38, (byte) 0x78, (byte) 0x38, (byte) 0x18, (byte) 0x08, 0, 0, 0, 0,
 		0, 0, 0 };
-	private static final byte[] down = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x30, (byte) 0xff, (byte) 0x30, (byte) 0x20, 0, 0, 0, 0, 0,
+	private static final byte[] down = { 0, 0, 0, 0, 0, 0, (byte) 0x80, (byte) 0xc0,
+			(byte) 0xe0, (byte) 0xf0, (byte) 0xe0, (byte) 0xc0,  (byte) 0x80, 0, 0, 0, 0,
 			0, 0, 0 };
-	private static final byte[] right = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x20, (byte) 0x20, (byte) 0xf8, (byte) 0x70, (byte) 0x20, 0,
-			0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x70, (byte) 0xf8, (byte) 0x20, (byte) 0x20, (byte) 0x20, 0,
-			0, 0, 0, 0, 0, 0, 0 };
+	private static final byte[] right = { (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x78, (byte) 0x78, (byte) 0x78, (byte) 0x30, (byte) 0x30, (byte) 0x30};
+	private static final byte[] left = { (byte) 0x30, (byte) 0x30, (byte) 0x78, (byte) 0x78, (byte) 0x78, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30, (byte) 0x30};
 	private static final byte[] up_eight = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
 		(byte) 0x40, (byte) 0xff, (byte) 0x40, (byte) 0x20, 0, 0, 0, 0, 0,
 		0, 0, 0 };
@@ -373,49 +379,11 @@ public class TestActivity extends Activity {
         }
 	}
 	
-	/*
-	void doBindService() {
-		// Establish a connection with the service. We use an explicit
-		// class name because there is no reason to be able to let other
-		// applications replace our component.
-		if (!mIsBound) {
-			bindService(new Intent(this, BipsService.class), mConnection,
-					Context.BIND_AUTO_CREATE);
-			mIsBound = true;
-			mCallbackText.setText("Binding.");
-		} else {
-			mCallbackText.setText("Already Bound.");
-		}
-	}
-
-	void doUnbindService() {
-		if (mIsBound) {
-			// If we have received the service, and hence registered with
-			// it, then now is the time to unregister.
-			if (mService != null) {
-				try {
-					Message msg = Message.obtain(null,
-							BipsService.MSG_UNREGISTER_CLIENT);
-					msg.replyTo = mMessenger;
-					mService.send(msg);
-				} catch (RemoteException e) {
-					// There is nothing special we need to do if the service
-					// has crashed.
-				}
-			}
-
-			// Detach our existing connection.
-			unbindService(mConnection);
-			mIsBound = false;
-			mCallbackText.setText("Unbinding.");
-		}
-	}
-*/
 	byte[] getImageFromRadio(RadioGroup group) {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
 		if (temp.getText().toString().startsWith("U"))
-			return up;
+			return upWide;
 		if (temp.getText().toString().startsWith("D"))
 			return down;
 		if (temp.getText().toString().startsWith("L"))
