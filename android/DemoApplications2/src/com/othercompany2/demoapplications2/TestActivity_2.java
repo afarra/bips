@@ -1,7 +1,5 @@
 package com.othercompany2.demoapplications2;
 
-import com.group057.BipsService;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -12,6 +10,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
@@ -19,9 +18,13 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-public class TestActivity extends Activity {
+import com.group057.BipsService;
+import com.group057.IRemoteService;
+import com.group057.IRemoteServiceCallback;
+
+public class TestActivity_2 extends Activity {
 	// Debugging
-    private static final String TAG = "TestActivity";
+    private static final String TAG = "AltTestActivity";
     private static final boolean D = true;
 
     // Images to send
@@ -30,6 +33,8 @@ public class TestActivity extends Activity {
     private static final byte [] right = {0, 0, 0, 0, 0, 0, (byte)0x8, (byte)0x8, (byte)0x49, (byte)0x2a, (byte)0x1c, (byte)0x08, 0, 0, 0, 0, 0, 0, 0, 0};
     private static final byte [] left = {0, 0, 0, 0, 0, 0, (byte)0x1c, (byte)0x2a, (byte)0x49, (byte)0x08, (byte)0x08, (byte)0x08, 0, 0, 0, 0, 0, 0, 0, 0};
     
+    /** IRemoteService for communication with service (will replace Messenger) */
+    IRemoteService mIRemoteService = null;
 	/** Messenger for communicating with service. */
 	Messenger mService = null;
 	/** Flag indicating whether we have called bind on the service. */
@@ -73,7 +78,7 @@ public class TestActivity extends Activity {
         mSendImageButton.setText("Send Up");
         mSendImageButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-        		Message msg = Message.obtain(null, BipsService.DEBUG_SEND_IMAGE);
+/*        		Message msg = Message.obtain(null, BipsService.DEBUG_SEND_IMAGE);
         		Bundle bundle = new Bundle();
         		bundle.putInt(BipsService.API_IMAGE_TIME, 10);
         		bundle.putByteArray(BipsService.API_IMAGE_PIXELS, up);
@@ -86,6 +91,15 @@ public class TestActivity extends Activity {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+        		*/
+
+                try {
+        			mIRemoteService.imageRequestQueue(up, 5000, (byte) 0, Process.myPid());
+        		} catch (RemoteException e) {
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
+        		}
+                
             }
         });
         
@@ -94,13 +108,22 @@ public class TestActivity extends Activity {
         mSendImageButton.setText("Queue Left");
         mSendImageButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-        		Message msg = BipsService.createImageRequestMessage(left, 2000, (byte)3, mMessenger);
+/*        		Message msg = BipsService.createImageRequestMessage(left, 2000, (byte)3, mMessenger);
         		try {
 					mService.send(msg);
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+        		
+*/
+                try {
+        			mIRemoteService.imageRequestCancelCurrent(Process.myPid());
+        		} catch (RemoteException e) {
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
+        		}
+                
             }
         });
 	}
@@ -127,7 +150,7 @@ public class TestActivity extends Activity {
 	    public void handleMessage(Message msg) {
 	        switch (msg.what) {
 	            case BipsService.MSG_SET_VALUE:
-	                mCallbackText.setText("Received from service: " + msg.arg1);
+	                mCallbackText.setText("BIPS Set Val: " + msg.arg1);
 	                break;
 	            default:
 	                super.handleMessage(msg);
@@ -139,12 +162,39 @@ public class TestActivity extends Activity {
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final Messenger mMessenger = new Messenger(new IncomingHandler());
+	final IncomingHandler mHandler = new IncomingHandler();
+	final Messenger mMessenger = new Messenger(mHandler);
 
 	/**
 	 * Class for interacting with the main interface of the service.
 	 */
 	private ServiceConnection mConnection = new ServiceConnection() {
+	    // Called when the connection with the service is established
+	    public void onServiceConnected(ComponentName className, IBinder service) {
+	        // Following the example above for an AIDL interface,
+	        // this gets an instance of the IRemoteInterface, which we can use to call on the service
+	        mIRemoteService = IRemoteService.Stub.asInterface(service);
+	        mCallbackText.setText("Attached to BIPS.");
+
+			// We want to monitor the service for as long as we are
+			// connected to it.
+			try {
+				mIRemoteService.registerCallback(mCallback);
+			} catch (RemoteException e) {
+				// In this case the service has crashed before we could even
+				// do anything with it; we can count on soon being
+				// disconnected (and then reconnected if it can be restarted)
+				// so there is no need to do anything here.
+			}
+	    }
+
+	    // Called when the connection with the service disconnects unexpectedly
+	    public void onServiceDisconnected(ComponentName className) {
+	        Log.e(TAG, "Service has unexpectedly disconnected");
+	        mIRemoteService = null;
+	    }
+	};
+/*	private ServiceConnection mConnection = new ServiceConnection() {
 	    public void onServiceConnected(ComponentName className,
 	            IBinder service) {
 	        // This is called when the connection with the service has been
@@ -178,6 +228,7 @@ public class TestActivity extends Activity {
 //	        Toast.makeText(this, R.string.remote_service_connected,
 //	                Toast.LENGTH_SHORT).show();
 	    }
+	
 
 	    public void onServiceDisconnected(ComponentName className) {
 	        // This is called when the connection with the service has been
@@ -189,9 +240,45 @@ public class TestActivity extends Activity {
 //	        Toast.makeText(this, R.string.remote_service_disconnected,
 //	                Toast.LENGTH_SHORT).show();
 	    }
-	};
+	};*/
+	
 
+    
 	void doBindService() {
+	    // Establish a connection with the service.  We use an explicit
+	    // class name because there is no reason to be able to let other
+		// applications replace our component.
+		if (!mIsBound){
+			bindService(new Intent("com.group057.IRemoteService"), mConnection,
+					Context.BIND_AUTO_CREATE);
+			mIsBound = true;
+			mCallbackText.setText("Binding.");
+		} else {
+			mCallbackText.setText("Already Bound.");
+		}
+	}
+	
+	void doUnbindService() {
+		if (mIsBound) {
+            // If we have received the service, and hence registered with
+            // it, then now is the time to unregister.
+            if (mIRemoteService != null) {
+                try {
+                    mIRemoteService.unregisterCallback(mCallback);
+                } catch (RemoteException e) {
+                    // There is nothing special we need to do if the service
+                    // has crashed.
+                }
+            }
+
+            // Detach our existing connection.
+            unbindService(mConnection);
+            mIsBound = false;
+            mCallbackText.setText("Unbinding.");
+        }
+	}
+	
+/*	void doBindService() {
 	    // Establish a connection with the service.  We use an explicit
 	    // class name because there is no reason to be able to let other
 		// applications replace our component.
@@ -226,5 +313,32 @@ public class TestActivity extends Activity {
 	        mIsBound = false;
 	        mCallbackText.setText("Unbinding.");
 	    }
-	}
+	}*/
+	
+
+    // ----------------------------------------------------------------------
+    // Code showing how to deal with callbacks.
+    // ----------------------------------------------------------------------
+
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    	public int getPid(){
+            return Process.myPid();
+        }
+    	
+    	/**
+         * This is called by the remote service regularly to tell us about
+         * new values.  Note that IPC calls are dispatched through a thread
+         * pool running in each process, so the code executing here will
+         * NOT be running in our main thread like most other things -- so,
+         * to update the UI, we need to use a Handler to hop over there.
+         */
+        public void valueChanged(int value) {
+            mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+        }
+    };
+    
 }

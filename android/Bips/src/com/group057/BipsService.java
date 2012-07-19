@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -15,6 +14,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
@@ -101,6 +101,7 @@ public class BipsService extends Service {
 	NotificationManager mNM;
 	/** Keeps track of all current registered clients. */
 	ArrayList<Messenger> mClients = new ArrayList<Messenger>();
+	ArrayList<IRemoteServiceCallback> mClientsAidl = new ArrayList<IRemoteServiceCallback>();
 	/** Holds last value set by a client. */
 	int mValue = 0;
 
@@ -156,7 +157,7 @@ public class BipsService extends Service {
 					if (D)
 						Log.i(TAG, "MESSAGE_STATE_CHANGE: (CONNECTED) "
 								+ msg.arg1);
-
+					mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, msg.arg1, 0));
 					break;
 				case BluetoothChatService.STATE_CONNECTING:
 					if (D)
@@ -165,6 +166,11 @@ public class BipsService extends Service {
 
 					break;
 				case BluetoothChatService.STATE_LISTEN:
+					if (D)
+						Log.i(TAG, "MESSAGE_STATE_CHANGE: (LISTENING) " + msg.arg1);
+					mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, msg.arg1, 0));
+
+					break;
 				case BluetoothChatService.STATE_NONE:
 					if (D)
 						Log.i(TAG, "MESSAGE_STATE_CHANGE: (NONE) " + msg.arg1);
@@ -193,9 +199,9 @@ public class BipsService extends Service {
 						Toast.LENGTH_SHORT).show();*/
 				break;
 			case MESSAGE_TOAST:
-				/*Toast.makeText(getApplicationContext(),
+				Toast.makeText(getApplicationContext(),
 						msg.getData().getString(TOAST), Toast.LENGTH_SHORT)
-						.show();*/
+						.show();
 				
 				break;
 			case REQUEST_CONNECT_DEVICE_SECURE:
@@ -241,7 +247,9 @@ public class BipsService extends Service {
 							if (D)
 								Log.i(TAG, "Cancelled");
 							mImageQueue[i].remove(j);
-							--j;	// decrement since the next index will be pushed forward to the just removed one
+							// decrement since the next index will be pushed forward to the just removed one
+							// TODO could be change to a loop that iterates backwards instead to remove this line
+							--j;	
 						}
 					}
 				}
@@ -328,6 +336,19 @@ public class BipsService extends Service {
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
 
+		if (mChatService != null) {
+            // Only if the state is STATE_NONE, do we know that we haven't started already
+            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
+
+        		if (D){
+        			Log.e(TAG, "Service starting BT threads");
+        		}
+        		
+              // Start the Bluetooth chat services
+              mChatService.start();
+            }
+        }
+		
 		// Get the paired device.
 		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
 		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -385,8 +406,95 @@ public class BipsService extends Service {
 	 */
 	@Override
 	public IBinder onBind(Intent intent) {
-		return mMessenger.getBinder();
+		//return mMessenger.getBinder();
+		return mBinder;
 	}
+	private final IRemoteService.Stub mBinder = new IRemoteService.Stub() {
+        public int getPid(){
+            return Process.myPid();
+        }
+        public void basicTypes(int anInt, long aLong, boolean aBoolean,
+            float aFloat, double aDouble, String aString) {
+            // Does nothing
+        }
+        
+        public void imageRequestQueue(byte[] image, int time, byte priority, int pid) {
+        	if (D)
+				Log.i(TAG, "Queuing image: time " + time + " PID: " + pid);
+			// Add an image into the queues for projection
+			BipsImage bImage = new BipsImage(image, priority, time, pid);
+			
+			mImageQueue[bImage.priority].add(bImage);	
+			
+        }
+        
+        public void imageRequestCancelCurrent(int pid) {
+
+			if (D)
+				Log.i(TAG, "Cancel current image: PID " + pid);
+			// Cancel the current projected image if it is from the requesting application
+			// This is done by setting the service monitoring status to IDLE
+			if (mCurrentImage != null && pid == mCurrentImage.pid)
+			{
+				mHandler.post(rSetIdle);
+			}
+        }
+        
+        public void imageRequestCancelAll(int pid) {
+        	if (D)
+				Log.i(TAG, "Cancelling all images: PID " + pid);
+			// Cancel all the images in the queues from this application
+			// Search through all priority queues for images with matching messenger and remove
+			for( int i = 0; i < mImageQueue.length; ++i)
+			{
+				for (int j = 0; j < mImageQueue[i].size(); ++j)
+				{
+					if (mImageQueue[i].get(j).pid == pid)
+					{
+						if (D)
+							Log.i(TAG, "Cancelled");
+						BipsImage image = mImageQueue[i].remove(j);
+						image = null;
+						--j;	// decrement since the next index will be pushed forward to the just removed one
+					}
+				}
+			}
+        }
+        
+        public void deviceChosenConnect(String address) {
+        	// When DeviceListActivity returns with a device to connect
+			// Get the BluetoothDevice object
+			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+			// Attempt to connect to the device
+			mChatService.connect(device, true);
+        }
+
+        public void registerCallback(IRemoteServiceCallback client) {
+			if (D)
+				Log.i(TAG, "Added client callback: " + client.toString());
+			mClientsAidl.add(client);
+		}
+
+        public void unregisterCallback(IRemoteServiceCallback client) {
+        	if (D)
+				Log.i(TAG, "Removed client callback: " + client.toString());
+			mClientsAidl.remove(client);
+		}
+        
+        public void valueSetClient(int value) {
+			mValue = value;
+			for (int i = mClientsAidl.size() - 1; i >= 0; i--) {
+				try {
+					mClientsAidl.get(i).valueChanged(mValue);
+				} catch (RemoteException e) {
+					// The client is dead. Remove it from the list;
+					// we are going through the list from back to front
+					// so this is safe to do inside the loop.
+					mClientsAidl.remove(i);
+				}
+			}
+        }
+    };
 
 	/**
 	 * Show a notification while this service is running.
@@ -436,7 +544,6 @@ public class BipsService extends Service {
 					.array();
 			mChatService.write(message.pixelArray);
 			mChatService.write(byteTime);
-
 			// still need to write the priority, time, etc.
 		}
 	}
@@ -471,12 +578,16 @@ public class BipsService extends Service {
 		// A separate thread for queue monitoring is created and then started.
 		messageMonitoring = performOnBackgroundThread(new Runnable(){
 			public void run() {
-				while (!mIsDestroyed) {
+				while (true) {
 					// Stop the service if nobody is using it.
 					if (mClients.isEmpty())
 					{
 						stopSelf();
 					}
+					
+					// Stop thread if the service is destroyed
+					if (mIsDestroyed)
+						return;
 					 
 					int delay = 0;	// by default checks the queues once per second
 
@@ -638,8 +749,10 @@ class BipsImage {
 						// 20 columns/horizontal pixels)
 	byte priority; // the priority level from 0-4
 	int time; // the length of time to project the image in seconds
+	
 	Messenger requester; // may be used to identify the requesting application
-
+	int pid; 
+	
 	BipsImage(){
 		priority = 0;
 		time = 0;
@@ -650,5 +763,12 @@ class BipsImage {
 		priority = iPriority;
 		time = iTime;
 		requester = iId;
+	}
+
+	BipsImage(byte[] imageByteArray, byte iPriority, int iTime, int iId) {
+		pixelArray = imageByteArray;
+		priority = iPriority;
+		time = iTime;
+		pid = iId;
 	}
 }

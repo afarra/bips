@@ -1,4 +1,4 @@
-package com.group057.demoapplications;
+package com.othercompany.demoapplications;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -11,24 +11,27 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Toast;
-import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.group057.BipsService;
+import com.group057.IRemoteService;
+import com.group057.IRemoteServiceCallback;
 import com.group057.R;
 
-public class TestActivity2 extends Activity {
+public class TestActivity extends Activity {
 	// Debugging
-	private static final String TAG = "TestActivity2";
+	private static final String TAG = "BIPSTestApp";
 	private static final boolean D = true;
 
 	// Images to send
@@ -65,8 +68,10 @@ public class TestActivity2 extends Activity {
 	// Local Bluetooth adapter
 	private BluetoothAdapter mBluetoothAdapter = null;
 	
+	
 	/** Messenger for communicating with service. */
 	Messenger mService = null;
+    IRemoteService mIRemoteService = null;
 	/** Flag indicating whether we have called bind on the service. */
 	boolean mIsBound;
 
@@ -93,6 +98,7 @@ public class TestActivity2 extends Activity {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         
 		// Set up the window layout
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.test_activity2);
 	}
 
@@ -117,7 +123,7 @@ public class TestActivity2 extends Activity {
 				mImageChosen = getImageFromRadio(mImageRadio);
 				if (mImageChosen != null && mPriorityChosen >= 0
 						&& mDurationText.getText() != null) {
-
+/*
 					Message msg = BipsService.createImageRequestMessage(
 							mImageChosen, (int) Integer.parseInt(mDurationText
 									.getText().toString()), mPriorityChosen,
@@ -129,7 +135,14 @@ public class TestActivity2 extends Activity {
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					}
+					}*/
+	                try {
+	        			mIRemoteService.imageRequestQueue(mImageChosen, Integer.parseInt(mDurationText
+								.getText().toString()), mPriorityChosen, Process.myPid());
+	        		} catch (RemoteException e) {
+	        			// TODO Auto-generated catch block
+	        			e.printStackTrace();
+	        		}
 				}
 			}
 		});
@@ -140,15 +153,19 @@ public class TestActivity2 extends Activity {
 		mCancelCurrentButton.setEnabled(false);
 		mCancelCurrentButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-
-					Message msg = BipsService.cancelCurrentImageRequestMessage(mMessenger);
-					// send off the message
-					try {
-						mService.send(msg);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+				/*
+				 * Message msg =
+				 * BipsService.cancelCurrentImageRequestMessage(mMessenger); //
+				 * send off the message try { mService.send(msg); } catch
+				 * (RemoteException e) { // TODO Auto-generated catch block
+				 * e.printStackTrace(); }
+				 */
+				try {
+					mIRemoteService.imageRequestCancelCurrent(Process.myPid());
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		});
 		// Initialize the cancel all images button with a listener that for click
@@ -157,7 +174,7 @@ public class TestActivity2 extends Activity {
 		mCancelAllButton.setEnabled(false);
 		mCancelAllButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-
+/*
 					Message msg = BipsService.cancelAllImagesRequestMessage(mMessenger);
 
 					// send off the message
@@ -166,7 +183,15 @@ public class TestActivity2 extends Activity {
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					}
+					}*/
+				
+				try {
+					mIRemoteService.imageRequestCancelAll(Process.myPid());
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
 			}
 		});
 
@@ -185,6 +210,7 @@ public class TestActivity2 extends Activity {
 					// Bind Bips
 					doBindService();
 		        }
+		        
 		        
 				mSendImageButton.setEnabled(true);
 				mCancelAllButton.setEnabled(true);
@@ -228,12 +254,44 @@ public class TestActivity2 extends Activity {
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final Messenger mMessenger = new Messenger(new IncomingHandler());
+	final IncomingHandler mHandler = new IncomingHandler();
+	final Messenger mMessenger = new Messenger(mHandler);
+
+	/**
+	 * Class for interacting with the main interface of the service.
+	 */
 
 	/**
 	 * Class for interacting with the main interface of the service.
 	 */
 	private ServiceConnection mConnection = new ServiceConnection() {
+	    // Called when the connection with the service is established
+	    public void onServiceConnected(ComponentName className, IBinder service) {
+	        // Following the example above for an AIDL interface,
+	        // this gets an instance of the IRemoteInterface, which we can use to call on the service
+	        mIRemoteService = IRemoteService.Stub.asInterface(service);
+	        mCallbackText.setText("Attached to BIPS.");
+
+			// We want to monitor the service for as long as we are
+			// connected to it.
+			try {
+				mIRemoteService.registerCallback(mCallback);
+			} catch (RemoteException e) {
+				// In this case the service has crashed before we could even
+				// do anything with it; we can count on soon being
+				// disconnected (and then reconnected if it can be restarted)
+				// so there is no need to do anything here.
+			}
+
+	    }
+
+	    // Called when the connection with the service disconnects unexpectedly
+	    public void onServiceDisconnected(ComponentName className) {
+	        Log.e(TAG, "Service has unexpectedly disconnected");
+	        mIRemoteService = null;
+	    }
+	};
+/*	private ServiceConnection mConnection = new ServiceConnection() {
 		public void onServiceConnected(ComponentName className, IBinder service) {
 			// This is called when the connection with the service has been
 			// established, giving us the service object we can use to
@@ -278,7 +336,44 @@ public class TestActivity2 extends Activity {
 			// Toast.LENGTH_SHORT).show();
 		}
 	};
+*/
+	
 
+    
+	void doBindService() {
+	    // Establish a connection with the service.  We use an explicit
+	    // class name because there is no reason to be able to let other
+		// applications replace our component.
+		if (!mIsBound){
+			bindService(new Intent(IRemoteService.class.getName()), mConnection,
+					Context.BIND_AUTO_CREATE);
+			mIsBound = true;
+			mCallbackText.setText("Binding.");
+		} else {
+			mCallbackText.setText("Already Bound.");
+		}
+	}
+	void doUnbindService() {
+		if (mIsBound) {
+            // If we have received the service, and hence registered with
+            // it, then now is the time to unregister.
+            if (mIRemoteService != null) {
+                try {
+                    mIRemoteService.unregisterCallback(mCallback);
+                } catch (RemoteException e) {
+                    // There is nothing special we need to do if the service
+                    // has crashed.
+                }
+            }
+
+            // Detach our existing connection.
+            unbindService(mConnection);
+            mIsBound = false;
+            mCallbackText.setText("Unbinding.");
+        }
+	}
+	
+	/*
 	void doBindService() {
 		// Establish a connection with the service. We use an explicit
 		// class name because there is no reason to be able to let other
@@ -315,7 +410,7 @@ public class TestActivity2 extends Activity {
 			mCallbackText.setText("Unbinding.");
 		}
 	}
-
+*/
 	byte[] getImageFromRadio(RadioGroup group) {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
@@ -361,6 +456,30 @@ public class TestActivity2 extends Activity {
         }
     }
 	
-	
+
+    // ----------------------------------------------------------------------
+    // Code showing how to deal with callbacks.
+    // ----------------------------------------------------------------------
+
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    	public int getPid(){
+            return Process.myPid();
+        }
+    	
+    	/**
+         * This is called by the remote service regularly to tell us about
+         * new values.  Note that IPC calls are dispatched through a thread
+         * pool running in each process, so the code executing here will
+         * NOT be running in our main thread like most other things -- so,
+         * to update the UI, we need to use a Handler to hop over there.
+         */
+        public void valueChanged(int value) {
+            mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+        }
+    };
 }
 

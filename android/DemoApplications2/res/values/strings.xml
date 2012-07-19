@@ -6,9 +6,9 @@
     <string name="title_activity_main_activity2">MainActivity2</string>
 
         <!-- TestActivity -->
-    <string name="title_text_activity">Test Activity Alt</string>
-    <string name="remote_service_connected">Test: Remote Service connected</string>
-    <string name="remote_service_disconnected">Test: Remote Service disconnected</string>
+    <string name="title_text_activity">Alternate Test Activity</string>
+    <string name="remote_service_connected">Test: Remote Service bound</string>
+    <string name="remote_service_disconnected">Test: Remote Service unbound</string>
     <string name="settings_text">Text</string>
     <string name="send">Send</string>
     <string name="sendImage">Send Image</string>

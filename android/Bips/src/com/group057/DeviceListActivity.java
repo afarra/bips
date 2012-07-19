@@ -32,6 +32,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
@@ -44,6 +45,8 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.group057.IRemoteService;
 
 /**
  * This Activity appears as a dialog. It lists any paired devices and
@@ -67,6 +70,8 @@ public class DeviceListActivity extends Activity {
     // for communication with BIPS
     /** Messenger for communicating with service. */
 	Messenger mService = null;
+    IRemoteService mIRemoteService = null;
+
 	/** Flag indicating whether we have called bind on the service. */
 	boolean mIsBound;
 	
@@ -187,12 +192,20 @@ public class DeviceListActivity extends Activity {
 
             // Set result and finish this Activity
             setResult(Activity.RESULT_OK, intent);
-            
+/*            
             // Give the BIPS the BT device to connect to 
             Message msg = Message.obtain(null,
                     BipsService.REQUEST_CONNECT_DEVICE_SECURE, intent);
             try {
 				mService.send(msg);
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            */
+            
+            try {
+				mIRemoteService.deviceChosenConnect(address);
 			} catch (RemoteException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -251,13 +264,41 @@ public class DeviceListActivity extends Activity {
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final Messenger mMessenger = new Messenger(new IncomingHandler());
+	final IncomingHandler mHandler = new IncomingHandler();
+	final Messenger mMessenger = new Messenger(mHandler);
 
 
 	/**
 	 * Class for interacting with the main interface of the service.
 	 */
+	
 	private ServiceConnection mConnection = new ServiceConnection() {
+	    // Called when the connection with the service is established
+	    public void onServiceConnected(ComponentName className, IBinder service) {
+	        // Following the example above for an AIDL interface,
+	        // this gets an instance of the IRemoteInterface, which we can use to call on the service
+	        mIRemoteService = IRemoteService.Stub.asInterface(service);
+
+			// We want to monitor the service for as long as we are
+			// connected to it.
+			try {
+				mIRemoteService.registerCallback(mCallback);
+			} catch (RemoteException e) {
+				// In this case the service has crashed before we could even
+				// do anything with it; we can count on soon being
+				// disconnected (and then reconnected if it can be restarted)
+				// so there is no need to do anything here.
+			}
+	    }
+
+	    // Called when the connection with the service disconnects unexpectedly
+	    public void onServiceDisconnected(ComponentName className) {
+	        Log.e(TAG, "Service has unexpectedly disconnected");
+	        mIRemoteService = null;
+	    }
+	};
+	
+/*	private ServiceConnection mConnection = new ServiceConnection() {
 	    public void onServiceConnected(ComponentName className,
 	            IBinder service) {
 	        // This is called when the connection with the service has been
@@ -303,13 +344,13 @@ public class DeviceListActivity extends Activity {
 	        //        Toast.LENGTH_SHORT).show();
 	    }
 	};
-
+*/
 	void doBindService() {
 	    // Establish a connection with the service.  We use an explicit
 	    // class name because there is no reason to be able to let other
 		// applications replace our component.
 		if (!mIsBound){
-			bindService(new Intent(this, BipsService.class), mConnection,
+			bindService(new Intent("com.group057.IRemoteService"), mConnection,
 					Context.BIND_AUTO_CREATE);
 			mIsBound = true;
 			//mCallbackText.setText("Binding.");
@@ -318,24 +359,47 @@ public class DeviceListActivity extends Activity {
 	
 	void doUnbindService() {
 	    if (mIsBound) {
-	        // If we have received the service, and hence registered with
-	        // it, then now is the time to unregister.
-	        if (mService != null) {
-	            try {
-	                Message msg = Message.obtain(null,
-	                        BipsService.MSG_UNREGISTER_CLIENT);
-	                msg.replyTo = mMessenger;
-	                mService.send(msg);
-	            } catch (RemoteException e) {
-	                // There is nothing special we need to do if the service
-	                // has crashed.
-	            }
-	        }
-
+	    	// If we have received the service, and hence registered with
+            // it, then now is the time to unregister.
+            if (mIRemoteService != null) {
+                try {
+                    mIRemoteService.unregisterCallback(mCallback);
+                } catch (RemoteException e) {
+                    // There is nothing special we need to do if the service
+                    // has crashed.
+                }
+            }
 	        // Detach our existing connection.
 	        unbindService(mConnection);
 	        mIsBound = false;
 	        //mCallbackText.setText("Unbinding.");
 	    }
 	}
+	
+
+    // ----------------------------------------------------------------------
+    // Code showing how to deal with callbacks.
+    // ----------------------------------------------------------------------
+
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    	public int getPid(){
+            return Process.myPid();
+        }
+    	
+    	/**
+         * This is called by the remote service regularly to tell us about
+         * new values.  Note that IPC calls are dispatched through a thread
+         * pool running in each process, so the code executing here will
+         * NOT be running in our main thread like most other things -- so,
+         * to update the UI, we need to use a Handler to hop over there.
+         */
+        public void valueChanged(int value) {
+            mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+        }
+    };
+    
 }

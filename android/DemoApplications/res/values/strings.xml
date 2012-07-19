@@ -7,8 +7,8 @@
 
 
     
-    <!-- TestActivity2 -->
-    <string name="title_text_activity2">BIPS Test Activity</string>
+    <!-- TestActivity -->
+    <string name="title_text_activity">BIPS Test Activity</string>
     <string name="service_button_text">Connect to BIPS</string>
     <string name="duration_text">Duration (ms)</string>
     <string name="image_heading_text">What image to use?</string>
@@ -25,4 +25,6 @@
     <string name="send_button_text">Send image</string>
     <string name="send_cancel_text">Cancel current image</string>
     <string name="send_cancel_all_text">Cancel all queued</string>
+    <string name="default_time">5000</string>
+    <string name="connecting">Connecting to device&#8230;</string>
 </resources>
