@@ -1,10 +1,17 @@
 package navigator.app;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -66,7 +73,10 @@ public class NavigatorActivity extends Activity{
 	private Thread turnByturn;
 	private Thread retrieveDirections;
 	static boolean  reCalcDist = true;
+	static boolean  sentMessage = false;
 	private BluetoothAdapter mBluetoothAdapter = null;
+	private boolean simulation = false;
+	private MockLocationProvider mLP;
 	
 	/** Messenger for communicating with service. */
 	Messenger mService = null;
@@ -104,17 +114,20 @@ public class NavigatorActivity extends Activity{
         	startActivity(settingsIntent);
         }
         
+        Button simulation = (Button)findViewById(R.id.simulation);
+        simulation.setOnClickListener(startSimulation);
+        
         // If BT is not on, request that it be enabled.
         // setupChat() will then be called during onActivityResult
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!mBluetoothAdapter.isEnabled()) {
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-        // Otherwise, setup the chat session
-        } else {
-            // Bind Bips
-            doBindService();
-        }
+//        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+//        if (!mBluetoothAdapter.isEnabled()) {
+//            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+//        // Otherwise, setup the chat session
+//        } else {
+//            // Bind Bips
+//            doBindService();
+//        }
 
    
 
@@ -135,6 +148,9 @@ public class NavigatorActivity extends Activity{
             public void onProviderDisabled(String provider) {}
           };
 
+          
+          
+        locationManager.addTestProvider(LocationManager.GPS_PROVIDER, false, false, false, false, false, true, true, 0, 0);
         // Register the listener with the Location Manager to receive location updates
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
@@ -213,6 +229,7 @@ public class NavigatorActivity extends Activity{
     	boolean reCalcDest = true;
     	Location destination = new Location("Destination");
     	float distance = -1;
+    	
     	while(running) {
     
     		if( reCalcDest ) {
@@ -227,44 +244,62 @@ public class NavigatorActivity extends Activity{
     		}
     		
     		if( distance < 30 ) {
-    			//Send Information to BIPS//
-    			Message msg = null;
-    			switch(upComingStep.getCurrentArrow()) {
-    				case LEFT:
-    					msg  = BipsService.createImageRequestMessage(
-		                        left, (int)5000, (byte) 0, mMessenger);
-    				break;
-    				case RIGHT:
-    					msg  = BipsService.createImageRequestMessage(
-		                        right, (int)5000, (byte) 0, mMessenger);
-    				break;
-    			}
-
-    			if(msg != null) {
-                // send off the message
-	                try {
-	                    mService.send(msg);
-	                } catch (RemoteException e) {
-	                    // TODO Auto-generated catch block
-	                    e.printStackTrace();
-	                }
-    			}
+//    			//Send Information to BIPS//
+//    			Message msg = null;
+//    			switch(upComingStep.getCurrentArrow()) {
+//    				case LEFT:
+//    					msg  = BipsService.createImageRequestMessage(
+//		                        left, (int)5000, (byte) 0, mMessenger);
+//    				break;
+//    				case RIGHT:
+//    					msg  = BipsService.createImageRequestMessage(
+//		                        right, (int)5000, (byte) 0, mMessenger);
+//    				break;
+//    			}
+//
+//    			if(msg != null && !sentMessage) {
+//                // send off the message
+//	                try {
+//	                	sentMessage = true;
+//	                    mService.send(msg);
+//	                    Timer t = new Timer();
+//	                    t.schedule(new TimerTask() {
+//							public void run() {
+//								sentMessage = false;
+//							}
+//	                    }, 5000);
+//	                } catch (RemoteException e) {
+//	                    // TODO Auto-generated catch block
+//	                    e.printStackTrace();
+//	                }
+//    			}
     			
-    			directionsString = upComingStep.toString(distance);
+    			if (upComingStep != null) {
+    				directionsString = upComingStep.toString(distance);
+    			} else {
+    				directionsString = "Final Destination Close - Within "+ distance +"m";
+    			}
     	    	runOnUiThread(new Runnable(){
     				public void run() {
     					updateDirections();
     				}
     	    	});
     			if(distance < 5) {
-    				s = steps.pop();
-    				if (steps.size() != 0) {
-	    				upComingStep = steps.getFirst();
+	    			try {
+	    				s = steps.pop();
+	    				if (steps.size() != 0) {
+	    					upComingStep = steps.getFirst();
+	    				} else {
+	    					upComingStep = null;
+	    				}
+	    				//Recalculated everything.
 	    				reCalcDest = true;
 	    				reCalcDist = true;
-    				} else {
+	    				
+    				} catch (NoSuchElementException e) {
+    					//Steps List has been finished, user has reached destination.
+    					directionsString = "\n Arrived at destination";
     					running = false;
-    					directionsString += "\n Finish";
     	    	    	runOnUiThread(new Runnable(){
     	    				public void run() {
     	    					updateDirections();
@@ -325,14 +360,52 @@ public class NavigatorActivity extends Activity{
     	}
     }
     
+    
+    private OnClickListener startSimulation = new OnClickListener() {
+		public void onClick(View v) {
+			try {
+
+				List<String> data = new ArrayList<String>();
+				InputStream is = getAssets().open("data.txt");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+				String line = null;
+				while ((line = reader.readLine()) != null) {
+
+					data.add(line);
+				}
+				
+				//43.47353	-80.53231
+				currentBestLocation = new Location("");
+				currentBestLocation.setLatitude(43.471588);
+				currentBestLocation.setLongitude(-80.537426);
+		           locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER,
+		        		   currentBestLocation);
+
+        		to = new GeoPoint(43476849, -80540408);
+        		if(retrieveDirections != null && retrieveDirections.isAlive()) {
+        			retrieveDirections.stop();
+        		}
+        		
+        		mLP = new MockLocationProvider(locationManager, LocationManager.GPS_PROVIDER, data);
+        		
+                retrieveDirections = new Thread (new Runnable() {
+                	public void run() {
+                		simulation = true;
+                		RetrieveDirections();
+                	}
+                });
+                
+                retrieveDirections.start();
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+    };
+    
     private OnClickListener getDirectionsListener = new OnClickListener() {
         public void onClick(View v) {
-        	if(currentBestLocation != null) {
-        		
-        		if(to == null) {
-        			directions.setText("No destination selected, starting simulation mode.");
-        			to = new GeoPoint(43473800, -80555680);
-        		}
+        	if(currentBestLocation != null && to != null) {
         		
         		//retrieveDirections thread should be stopped if it exists
         		if(retrieveDirections != null && retrieveDirections.isAlive()) {
@@ -348,9 +421,9 @@ public class NavigatorActivity extends Activity{
         		retrieveDirections.start();
         	} else if (currentBestLocation == null) {
         		directions.setText("Could not find your current location");
-        	} //else if (to == null) {
-        		//directions.setText("Please select a destination");
-        	//}
+        	} else if (to == null) {
+        		directions.setText("Please select a destination");
+        	}
         }
     };
     
@@ -407,6 +480,11 @@ public class NavigatorActivity extends Activity{
         });
         
         turnByturn.start();
+        
+        if(simulation) {
+        	mLP.start();
+        	simulation = false;
+        }
     }
     
     
@@ -548,6 +626,7 @@ class StepsParserCallBacks extends DefaultHandler {
 	private String tmpVal;
 	private String tmpVal2;
 	
+	private String polyline;
 	private int distance;
 	
 	private float lng;
@@ -587,7 +666,7 @@ class StepsParserCallBacks extends DefaultHandler {
 		try {
 			//(int d, String i, float lat1, float long1, float lat2, float long2)
 		if (qName.equalsIgnoreCase("step")) {
-			lst.add(new Step(this.distance, this.instructions, this.lat1, this.lng1, this.lat2, this.lng2));
+			lst.add(new Step(this.distance, this.instructions, this.lat1, this.lng1, this.lat2, this.lng2, this.polyline));
 		} else if (qName.equalsIgnoreCase("start_location")) {
 			this.lng1 = this.lng;
 			this.lat1 = this.lat;
@@ -606,6 +685,8 @@ class StepsParserCallBacks extends DefaultHandler {
 			this.instructions+= this.tmpVal;
 		} else if (qName.equalsIgnoreCase("html_instructions")) {
 			this.instr = false;
+		} else if (qName.equalsIgnoreCase("points")) {
+			this.polyline = this.tmpVal;
 		}
 		
 		} catch (StringIndexOutOfBoundsException e) {
