@@ -29,7 +29,9 @@ volatile boolean triggered = false;
 double duration_on_us = 5.10;
 double duration_off_us = 2.70;
 boolean face_toggle[] = {true, true, true, true, true, true};
-double face_offset[] = {-90.00, -93.00, -89.00, -96.00, -90.00, -90.50};
+double face_offset[] = {-610.00, -613.00, -609.00, -616.00, -610.00, -610.50};
+//double face_offset[] = {340.00, 337.00, 341.00, 334.00, 340.00, 339.50};
+//double face_offset[] = {-90.00, -93.00, -89.00, -96.00, -90.00, -90.50};
 // HIGH SPEED (50k us) {-122.00, -122.80, -133.96, -119.28, -123.44, -121.68};
 // NORM SPEED (75k us) {-112.00, -112.80, -123.96, -109.28, -113.44, -111.68};
 // LOW SPEED (100k us) {-102.00, -102.80, -113.96, -99.28, -103.44, -101.68};
@@ -212,7 +214,7 @@ void loop(){
       unsigned long next_face = last_trig + (face_period * (i + 1)) + (face_period * face_offset[i] / 1000);
       
       // Perform other tasks beetween faces
-      perf_secondary_tasks(i);
+      //perf_secondary_tasks(i);
       
       while (micros() < next_face){
       }
@@ -277,27 +279,27 @@ void handle_diag_cmd() {
       Serial.print("\n");
     }
     else if (b == '=') {
-      Serial.print("Increasing ON duration.\n");
+//      Serial.print("Increasing ON duration.\n");
       duration_on_us += 0.1;
-      Serial.println(duration_on_us);
+//      Serial.println(duration_on_us);
     }
     else if (b == '-') {
-      Serial.print("Decreasing ON duration.\n");
+//      Serial.print("Decreasing ON duration.\n");
       if (duration_on_us != 0){
         duration_on_us -= 0.1;
-        Serial.println(duration_on_us);
+//        Serial.println(duration_on_us);
       }
     }
-    else if (b == '+') {
-      Serial.print("Increasing OFF duration.\n");
+    else if (b == '0') {
+//      Serial.print("Increasing OFF duration.\n");
       duration_off_us += 0.1;
-      Serial.println(duration_off_us);
+//      Serial.println(duration_off_us);
     }
-    else if (b == '-') {
-      Serial.print("Decreasing OFF duration.\n");
+    else if (b == '9') {
+//      Serial.print("Decreasing OFF duration.\n");
       if (duration_off_us != 0){
         duration_off_us -= 0.1;
-        Serial.println(duration_off_us);
+//        Serial.println(duration_off_us);
       }
     }
     else if (b == ';') {
@@ -319,7 +321,7 @@ void handle_diag_cmd() {
     }
     
     //  ~~~~~~~~~~~~~~~~~~~~~~~   FACE SPECIFIC   ~~~~~~~~~~~~~~~~~~~~~~~
-    else if (b >= '1' && b <= '7') {
+    else if (b >= '1' && b <= '6') {
       selected_face = b-49;
       Serial.print("Selected face #");
       Serial.println(selected_face + 1);
@@ -333,35 +335,168 @@ void handle_diag_cmd() {
       }
       Serial.print("\n");
     }
-    else if (b == ']') {
-      Serial.print("Increasing Offset for face #");
-      Serial.println(selected_face+1);
-      face_offset[selected_face] += 0.5;
-      Serial.println(face_offset[selected_face]);
-    }
     else if (b == '[') {
-      Serial.print("Decreasing Offset for face #");
-      Serial.println(selected_face+1);                            
-      face_offset[selected_face] -= 0.5;
-      Serial.println(face_offset[selected_face]);
+//      Serial.print("Increasing Offset for face #");
+//      Serial.println(selected_face+1);
+      face_offset[selected_face] += 0.5;
+//      Serial.println(face_offset[selected_face]);
     }
-    else if (b == '.') {
-      Serial.println("Increasing Offset for all faces ");
-      for (int i = 0; i < FACES; i++) {
-        face_offset[i] += 10.0;
-        Serial.print(face_offset[i]);
-        Serial.print(", ");
-      }
-      Serial.print("\n");
+    else if (b == ']') {
+//      Serial.print("Decreasing Offset for face #");
+//      Serial.println(selected_face+1);                            
+      face_offset[selected_face] -= 0.5;
+//      Serial.println(face_offset[selected_face]);
     }
     else if (b == ',') {
-      Serial.println("Decreasing Offset for all faces ");
+//      Serial.println("Increasing Offset for all faces");
+      for (int i = 0; i < FACES; i++) {
+        face_offset[i] += 10.0;
+//        Serial.print(face_offset[i]);
+//        Serial.print(", ");
+      }
+//      Serial.print("\n");
+    }
+    else if (b == '.') {
+//      Serial.println("Decreasing Offset for all faces");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] -= 10.0;
-        Serial.print(face_offset[i]);
-        Serial.print(", ");
+//        Serial.print(face_offset[i]);
+//        Serial.print(", ");
       }
-      Serial.print("\n");
+//      Serial.print("\n");
     }
+//    else if (b == '0') {
+//      Serial.print("Increasing number of faces.\n");
+//        num_faces++;
+//        Serial.println(num_faces);
+//    }
+//    else if (b == '9') {
+//      Serial.print("Decreasing number of faces.\n");
+//        num_faces--;
+//        Serial.println(num_faces);
+//    }
   }
 }
+
+//void handle_diag_cmd() {
+//  while (Serial.available() > 0) {
+//    byte b = Serial.read();
+//    if (b == '/') {
+//      Serial.print("T-rot: ");
+//      Serial.print(rotation_period);
+//      Serial.print("; T-face: ");
+//      Serial.print(rotation_period/FACES);
+//      Serial.print("; rot#: ");
+//      Serial.println(num_rotations);
+//    }
+//    else if (b == '?') {
+//      Serial.print("ON time: ");
+//      Serial.println(duration_on_us);
+//      Serial.print("OFF time: ");
+//      Serial.println(duration_off_us);
+//      Serial.print("Face offset: ");
+//      for (int i = 0; i < FACES; i++) {
+//        Serial.print(face_offset[i]);
+//        Serial.print(", ");
+//      }
+//      Serial.print("\n");
+//    }
+//    else if (b == '=') {
+//      Serial.print("Increasing ON duration.\n");
+//      duration_on_us += 0.1;
+//      Serial.println(duration_on_us);
+//    }
+//    else if (b == '-') {
+//      Serial.print("Decreasing ON duration.\n");
+//      if (duration_on_us != 0){
+//        duration_on_us -= 0.1;
+//        Serial.println(duration_on_us);
+//      }
+//    }
+//    else if (b == '+') {
+//      Serial.print("Increasing OFF duration.\n");
+//      duration_off_us += 0.1;
+//      Serial.println(duration_off_us);
+//    }
+//    else if (b == '-') {
+//      Serial.print("Decreasing OFF duration.\n");
+//      if (duration_off_us != 0){
+//        duration_off_us -= 0.1;
+//        Serial.println(duration_off_us);
+//      }
+//    }
+//    else if (b == ';') {
+//      Serial.print("Stopping laser ON override.\n");
+//      laser_on_override = false;
+//      digitalWrite(LASER0_PIN, LOW);
+//    }
+//    else if (b == '\'') {
+//      Serial.print("Starting laser ON override.\n");
+//      laser_on_override = true;
+//    }
+//    else if (b == 'l') {
+//      Serial.print("Turning on debug LED.\n");
+//      ir_debug = true;
+//    }
+//    else if (b == 'k') {
+//      Serial.print("Turning off debug LED.\n");
+//      ir_debug = false;
+//    }
+//    
+//    //  ~~~~~~~~~~~~~~~~~~~~~~~   FACE SPECIFIC   ~~~~~~~~~~~~~~~~~~~~~~~
+//    else if (b >= '1' && b <= '7') {
+//      selected_face = b-49;
+//      Serial.print("Selected face #");
+//      Serial.println(selected_face + 1);
+//    }
+//    else if (b == 't') {
+//      face_toggle[selected_face] = !face_toggle[selected_face];
+//      Serial.println("Face Toggled");
+//      for (int i = 0; i < FACES; i++) {
+//        Serial.print(face_toggle[i]);
+//        Serial.print(", ");
+//      }
+//      Serial.print("\n");
+//    }
+//    else if (b == ']') {
+//      face_offset[selected_face] += 0.5;
+//      if (DEBUG) {
+//        Serial.print("Increasing Offset for face #");
+//        Serial.println(selected_face+1);
+//        Serial.println(face_offset[selected_face]);
+//      }
+//    }
+//    else if (b == '[') {
+//      face_offset[selected_face] -= 0.5;
+//      if (DEBUG) {
+//        Serial.print("Decreasing Offset for face #");
+//        Serial.println(selected_face+1);                            
+//        Serial.println(face_offset[selected_face]);
+//      }
+//    }
+//    else if (b == '.') {
+//      Serial.println("Increasing Offset for all faces ");
+//      for (int i = 0; i < FACES; i++) {
+//        face_offset[i] += 10.0;
+//        if (DEBUG) {
+//          Serial.print(face_offset[i]);
+//          Serial.print(", ");
+//        }
+//      }
+//      if (DEBUG)
+//        Serial.print("\n");
+//    }
+//    else if (b == ',') {
+//      Serial.println("Decreasing Offset for all faces ");
+//      for (int i = 0; i < FACES; i++) {
+//        face_offset[i] -= 10.0;
+//        if (DEBUG) {
+//          Serial.print(face_offset[i]);
+//          Serial.print(", ");
+//        }
+//      }
+//      if (DEBUG)
+//        Serial.print("\n");
+//    }
+//  }
+//}
