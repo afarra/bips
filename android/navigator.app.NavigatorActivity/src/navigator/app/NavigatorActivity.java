@@ -1,63 +1,102 @@
 package navigator.app;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.android.maps.GeoPoint;
+import com.group057.BipsService;
+import com.group057.IRemoteService;
+import com.group057.IRemoteServiceCallback;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.Process;
+import android.os.RemoteException;
 import android.provider.Settings;
+
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.inputmethod.InputMethodManager;
+
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
+
 
 public class NavigatorActivity extends Activity{
 	
-	private String toAddress;
+
 	private Button setDestination;
 	private Button getDirections;
 	private EditText directions;
 	private LinkedList<Step> steps;
 	private LocationManager locationManager;
 	private LocationProvider locationProvider;
-    private static final int TWO_MINUTES = 1000 * 60 * 2;
-    private static final int THIRTY_SEC = 1000* 30;
+    //private static final int TWO_MINUTES = 1000 * 60 * 2;
+    //private static final int THIRTY_SEC = 1000* 30;
+    private static final int FIVE_SEC = 1000* 5;
 	private boolean running = false;
 	private Location currentBestLocation = null;
 	private static final int DESINATION_SELECTION=0;
+    private static final int REQUEST_ENABLE_BT = 3;
 	private GeoPoint to = null;
 	private Thread turnByturn;
 	private Thread retrieveDirections;
 	static boolean  reCalcDist = true;
+	static boolean  sentMessage = false;
+	private BluetoothAdapter mBluetoothAdapter = null;
+	private boolean simulation = false;
+	private MockLocationProvider mLP;
+	
+	/** Messenger for communicating with service. */
+	Messenger mService = null;
+	IRemoteService mIRemoteService = null;
+	/** Flag indicating whether we have called bind on the service. */
+	boolean mIsBound;
+	/** Some text view we are using to show state information. */
+	//static TextView mCallbackText;
 	
 	private String directionsString = "";
+	
+	
+	
+	private static final byte[] right = { (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0xf8, (byte) 0xf8, (byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+	private static final byte[] left = { (byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+	
+	private static final String NAV = "Navigator";
 	
 	/** Called when the activity is first created. */
     @Override
@@ -76,6 +115,22 @@ public class NavigatorActivity extends Activity{
         	Intent settingsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         	startActivity(settingsIntent);
         }
+        
+        Button simulation = (Button)findViewById(R.id.simulation);
+        simulation.setOnClickListener(startSimulation);
+        
+        // If BT is not on, request that it be enabled.
+        // setupChat() will then be called during onActivityResult
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+        // Otherwise, setup the chat session
+        } else {
+            // Bind Bips
+            doBindService();
+        }
+
    
 
         // Define a listener that responds to location updates
@@ -84,6 +139,7 @@ public class NavigatorActivity extends Activity{
             	if (isBetterLocation(location, currentBestLocation)) {
             		currentBestLocation = location;
             		reCalcDist = true;
+            		Log.d(NAV, "Test1");
             	}
             	              
             }
@@ -95,6 +151,9 @@ public class NavigatorActivity extends Activity{
             public void onProviderDisabled(String provider) {}
           };
 
+          
+          
+        locationManager.addTestProvider(LocationManager.GPS_PROVIDER, false, false, false, false, false, true, true, 0, 0);
         // Register the listener with the Location Manager to receive location updates
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
@@ -103,6 +162,7 @@ public class NavigatorActivity extends Activity{
     
     public void onDestory() {
     	turnByturn.stop();
+    	doUnbindService();
     }
 
 
@@ -118,8 +178,8 @@ public class NavigatorActivity extends Activity{
 
         // Check whether the new location fix is newer or older
         long timeDelta = location.getTime() - currentBestLocation.getTime();
-        boolean isSignificantlyNewer = timeDelta > THIRTY_SEC;
-        boolean isSignificantlyOlder = timeDelta < -THIRTY_SEC;
+        boolean isSignificantlyNewer = timeDelta > FIVE_SEC;
+        boolean isSignificantlyOlder = timeDelta < -FIVE_SEC;
         boolean isNewer = timeDelta > 0;
 
         // If it's been more than two minutes since the current location, use the new location
@@ -134,7 +194,7 @@ public class NavigatorActivity extends Activity{
         // Check whether the new location fix is more or less accurate
         int accuracyDelta = (int) (location.getAccuracy() - currentBestLocation.getAccuracy());
         boolean isLessAccurate = accuracyDelta > 0;
-        boolean isMoreAccurate = accuracyDelta <= 0; //For demo purposes = case is included
+        boolean isMoreAccurate = accuracyDelta < 0; //For demo purposes = case is included
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
 
         // Check if the old and new location are from the same provider
@@ -171,49 +231,112 @@ public class NavigatorActivity extends Activity{
     	
     	boolean reCalcDest = true;
     	Location destination = new Location("Destination");
+    	Location nextDest = new Location("nextDest");
+
     	float distance = -1;
+    	float nextDist = -1;
+    	
     	while(running) {
     
     		if( reCalcDest ) {
     			destination.setLongitude(s.getEnd().getLongitudeE6()/1E6);
     			destination.setLatitude(s.getEnd().getLatitudeE6()/1E6);
+    			if(upComingStep != null) {
+    				nextDest.setLatitude(upComingStep.getEnd().getLatitudeE6()/1E6);
+    				nextDest.setLongitude(upComingStep.getEnd().getLongitudeE6()/1E6);	
+    			}
     			reCalcDest = false;
     		}
     		
     		if ( reCalcDist ) {
-    			distance = currentBestLocation.distanceTo(destination);
+    			float tmpdistance = currentBestLocation.distanceTo(destination);
+    			float tmpnextDist = currentBestLocation.distanceTo(nextDest);
+    			
+    			boolean checkPointReached = false;
+    			if(tmpdistance > distance && tmpnextDist < nextDist) {
+    				checkPointReached = true;
+    			}
+    			distance = tmpdistance;
+    			tmpnextDist = nextDist;
+    			
     			reCalcDist = false;
-    		}
-    		
-    		if( distance < 30 ) {
-    			//Send Information to BIPS//
-    			directionsString = upComingStep.toString(distance);
-    	    	runOnUiThread(new Runnable(){
+    			Log.d(NAV, "Test2");
+    			//Log.d(NAV, "Distance: " + distance);
+    			//Log.d(NAV, "nextDist: " + nextDist);    		
+	    		if( distance < 30 ) {
+	    			//Send Information to BIPS//
+	    			if (upComingStep != null) {
+		    			try{
+			    			switch(upComingStep.getCurrentArrow()) {
+			    				case LEFT:
+			    					mIRemoteService.imageRequestQueue(left, 5000
+			    							, (byte) 0, Process.myPid());
+			    				break;
+			    				case RIGHT:
+			    					mIRemoteService.imageRequestQueue(right, 5000
+			    							, (byte) 0, Process.myPid());
+			    				break;
+			    			}
+			    		} catch (RemoteException e) {
+			    			// TODO Auto-generated catch block
+			    			e.printStackTrace();
+			    		}
+	    				directionsString = upComingStep.toString(distance);
+	    			} else {
+	    				directionsString = "Final Destination Close - Within "+ distance +"m";
+	    			}
+	    			
+	    			//mIRemoteService.imageRequestCancelCurrent(Process.myPid());
+	    	    	runOnUiThread(new Runnable(){
+	    				public void run() {
+	    					updateDirections();
+	    				}
+	    	    	});
+	    	    	
+	    	    	destination.setLongitude(s.getEnd().getLongitudeE6()/1E6);
+	    			destination.setLatitude(s.getEnd().getLatitudeE6()/1E6);
+	    	    	
+	    			if (distance < 8 || checkPointReached) {
+		    			try {
+		    				mIRemoteService.imageRequestCancelAll(Process.myPid());
+		    				s = steps.pop();
+		    				if (steps.size() != 0) {
+		    					upComingStep = steps.getFirst();
+		    				} else {
+		    					upComingStep = null;
+		    				}
+		    				//Recalculated everything.
+		    				reCalcDest = true;
+		    				reCalcDist = true;
+		    				
+	    				} catch (NoSuchElementException e) {
+	    					//Steps List has been finished, user has reached destination.
+	    					directionsString = "\n Arrived at destination";
+	    					running = false;
+	    				} catch (RemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	    			}
+    			}
+    		} /*else {
+    			directionsString = "Continue On Current Road for the next " + distance +"m";
+      	    	runOnUiThread(new Runnable(){
     				public void run() {
     					updateDirections();
     				}
     	    	});
-    			if(distance < 5) {
-    				s = steps.pop();
-    				if (steps.size() != 0) {
-	    				upComingStep = steps.getFirst();
-	    				reCalcDest = true;
-	    				reCalcDist = true;
-    				} else {
-    					running = false;
-    					directionsString += "\n Finish";
-    	    	    	runOnUiThread(new Runnable(){
-    	    				public void run() {
-    	    					updateDirections();
-    	    				}
-    	    	    	});
-    				}
-    			}
-    		}
+    		}*/
     		
     		
     		
     	}
+    	directionsString = "Arrived at the destination :D";
+	    	runOnUiThread(new Runnable(){
+			public void run() {
+				updateDirections();
+			}
+    	});
     	
     }
     
@@ -251,8 +374,59 @@ public class NavigatorActivity extends Activity{
     			Bundle b = data.getExtras();
     			to = new GeoPoint(b.getInt("destLat"),b.getInt("destLong"));
     		}
+    	break;
+        case REQUEST_ENABLE_BT:
+            // When the request to enable Bluetooth returns
+            if (resultCode == Activity.RESULT_OK) {
+                // Bluetooth is now enabled, so set up a chat session
+                doBindService();
+            } 
+        break;
     	}
     }
+    
+    
+    private OnClickListener startSimulation = new OnClickListener() {
+		public void onClick(View v) {
+			try {
+
+				List<String> data = new ArrayList<String>();
+				InputStream is = getAssets().open("data.txt");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+				String line = null;
+				while ((line = reader.readLine()) != null) {
+
+					data.add(line);
+				}
+				
+				//43.47353	-80.53231
+				currentBestLocation = new Location("");
+				currentBestLocation.setLatitude(43.471588);
+				currentBestLocation.setLongitude(-80.537426);
+		           locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER,
+		        		   currentBestLocation);
+
+        		to = new GeoPoint(43476849, -80540408);
+        		if(retrieveDirections != null && retrieveDirections.isAlive()) {
+        			retrieveDirections.stop();
+        		}
+        		
+        		mLP = new MockLocationProvider(locationManager, LocationManager.GPS_PROVIDER, data);
+        		
+                retrieveDirections = new Thread (new Runnable() {
+                	public void run() {
+                		simulation = true;
+                		RetrieveDirections();
+                	}
+                });
+                
+                retrieveDirections.start();
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+    };
     
     private OnClickListener getDirectionsListener = new OnClickListener() {
         public void onClick(View v) {
@@ -331,6 +505,11 @@ public class NavigatorActivity extends Activity{
         });
         
         turnByturn.start();
+        
+        if(simulation) {
+        	mLP.start();
+        	simulation = false;
+        }
     }
     
     
@@ -353,6 +532,111 @@ public class NavigatorActivity extends Activity{
         return urlString.toString();
     }
     
+    void doBindService() {
+		if (!mIsBound){
+			bindService(new Intent(IRemoteService.class.getName()), mConnection,
+					Context.BIND_AUTO_CREATE);
+			mIsBound = true;
+		} 
+    }
+
+	void doUnbindService() {
+		if (mIsBound) {
+            // If we have received the service, and hence registered with
+            // it, then now is the time to unregister.
+            if (mIRemoteService != null) {
+                try {
+                    mIRemoteService.unregisterCallback(mCallback);
+                } catch (RemoteException e) {
+                    // There is nothing special we need to do if the service
+                    // has crashed.
+                }
+            }
+
+            // Detach our existing connection.
+            unbindService(mConnection);
+            mIsBound = false;
+        }
+	}
+    	
+    	/**
+    	* Handler of incoming messages from service.
+    	*/
+    	static class IncomingHandler extends Handler {
+    	   @Override
+    	   public void handleMessage(Message msg) {
+    	       switch (msg.what) {
+    	           case BipsService.MSG_SET_VALUE:
+    	               //mCallbackText.setText("Received from service: " + msg.arg1);
+    	               break;
+    	           default:
+    	               super.handleMessage(msg);
+    	       }
+    	   }
+    	}
+
+    	final IncomingHandler mHandler = new IncomingHandler();
+    	/**
+    	* Target we publish for clients to send messages to Incoming Handler.
+    	*/
+    	final Messenger mMessenger = new Messenger(mHandler);
+    	
+    	
+    	/**
+    	* Class for interacting with the main interface of the service.
+    	*/
+    	private ServiceConnection mConnection = new ServiceConnection() {
+    		   public void onServiceConnected(ComponentName className, IBinder service) {
+    		        // Following the example above for an AIDL interface,
+    		        // this gets an instance of the IRemoteInterface, which we can use to call on the service
+    		        mIRemoteService = IRemoteService.Stub.asInterface(service);
+
+    				// We want to monitor the service for as long as we are
+    				// connected to it.
+    				try {
+    					mIRemoteService.registerCallback(mCallback);
+    				} catch (RemoteException e) {
+    					// In this case the service has crashed before we could even
+    					// do anything with it; we can count on soon being
+    					// disconnected (and then reconnected if it can be restarted)
+    					// so there is no need to do anything here.
+    				}
+
+    		    }
+
+    		    // Called when the connection with the service disconnects unexpectedly
+    		    public void onServiceDisconnected(ComponentName className) {
+    		        mIRemoteService = null;
+    		    }
+    	};
+    	
+
+        // ----------------------------------------------------------------------
+        // Code showing how to deal with callbacks.
+        // ----------------------------------------------------------------------
+
+        /**
+         * This implementation is used to receive callbacks from the remote
+         * service.
+         */
+        private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+        	public int getPid(){
+                return Process.myPid();
+            }
+        	
+        	/**
+             * This is called by the remote service regularly to tell us about
+             * new values.  Note that IPC calls are dispatched through a thread
+             * pool running in each process, so the code executing here will
+             * NOT be running in our main thread like most other things -- so,
+             * to update the UI, we need to use a Handler to hop over there.
+             */
+            public void valueChanged(int value) {
+                mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+            }
+        };
+
+    
 }
 
 
@@ -360,8 +644,8 @@ class StepsParserCallBacks extends DefaultHandler {
 	private LinkedList<Step> lst;
 	
 	private String tmpVal;
-	private String tmpVal2;
 	
+	private String polyline;
 	private int distance;
 	
 	private float lng;
@@ -401,7 +685,7 @@ class StepsParserCallBacks extends DefaultHandler {
 		try {
 			//(int d, String i, float lat1, float long1, float lat2, float long2)
 		if (qName.equalsIgnoreCase("step")) {
-			lst.add(new Step(this.distance, this.instructions, this.lat1, this.lng1, this.lat2, this.lng2));
+			lst.add(new Step(this.distance, this.instructions, this.lat1, this.lng1, this.lat2, this.lng2, this.polyline));
 		} else if (qName.equalsIgnoreCase("start_location")) {
 			this.lng1 = this.lng;
 			this.lat1 = this.lat;
@@ -420,6 +704,8 @@ class StepsParserCallBacks extends DefaultHandler {
 			this.instructions+= this.tmpVal;
 		} else if (qName.equalsIgnoreCase("html_instructions")) {
 			this.instr = false;
+		} else if (qName.equalsIgnoreCase("points")) {
+			this.polyline = this.tmpVal;
 		}
 		
 		} catch (StringIndexOutOfBoundsException e) {
