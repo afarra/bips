@@ -29,7 +29,7 @@ volatile boolean triggered = false;
 double duration_on_us = 5.10;
 double duration_off_us = 2.70;
 boolean face_toggle[] = {true, true, true, true, true, true};
-double face_offset[] = {-610.00, -613.00, -609.00, -616.00, -610.00, -610.50};
+double face_offset[] = {-640.00, -643.00, -637.00, -642.00, -634.50, -639.00};
 //double face_offset[] = {340.00, 337.00, 341.00, 334.00, 340.00, 339.50};
 //double face_offset[] = {-90.00, -93.00, -89.00, -96.00, -90.00, -90.50};
 // HIGH SPEED (50k us) {-122.00, -122.80, -133.96, -119.28, -123.44, -121.68};
@@ -208,13 +208,13 @@ void loop(){
     unsigned long last_trig = last_trigger;
     for (int i = 0; i < FACES; i++){
       // debug
-      if (i != selected_face && selected_face != 6){
-        continue;
-      }
+//      if (i != selected_face && selected_face != 6){
+//        continue;
+//      }
       unsigned long next_face = last_trig + (face_period * (i + 1)) + (face_period * face_offset[i] / 1000);
       
       // Perform other tasks beetween faces
-      //perf_secondary_tasks(i);
+      perf_secondary_tasks(i);
       
       while (micros() < next_face){
       }
@@ -335,19 +335,19 @@ void handle_diag_cmd() {
       }
       Serial.print("\n");
     }
-    else if (b == '[') {
+    else if (b == ']') {
 //      Serial.print("Increasing Offset for face #");
 //      Serial.println(selected_face+1);
       face_offset[selected_face] += 0.5;
 //      Serial.println(face_offset[selected_face]);
     }
-    else if (b == ']') {
+    else if (b == '[') {
 //      Serial.print("Decreasing Offset for face #");
 //      Serial.println(selected_face+1);                            
       face_offset[selected_face] -= 0.5;
 //      Serial.println(face_offset[selected_face]);
     }
-    else if (b == ',') {
+    else if (b == '.') {
 //      Serial.println("Increasing Offset for all faces");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] += 10.0;
@@ -356,7 +356,7 @@ void handle_diag_cmd() {
       }
 //      Serial.print("\n");
     }
-    else if (b == '.') {
+    else if (b == ',') {
 //      Serial.println("Decreasing Offset for all faces");
       for (int i = 0; i < FACES; i++) {
         face_offset[i] -= 10.0;
