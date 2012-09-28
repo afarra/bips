@@ -35,36 +35,46 @@ public class TestActivity extends Activity {
 	private static final boolean D = true;
 
 	// Images to send
-	private static final byte[] upWide = { (byte) 0x10, (byte) 0x10, (byte) 0x10, (byte) 0x30, 
+	private static final byte[] upWide = { 
+		(byte) 0x10, (byte) 0x10, (byte) 0x10, (byte) 0x30, 
 		(byte) 0x30, (byte) 0x30, (byte) 0x70, (byte) 0x70,
-		(byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, (byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, (byte) 0x30,
-		(byte) 0x10, (byte) 0x10, (byte) 0x10 };
-	private static final byte[] up = { 0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x18,
-		(byte) 0x38, (byte) 0x78, (byte) 0x38, (byte) 0x18, (byte) 0x08, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] down = { (byte) 0x80,(byte) 0x80,(byte) 0x80, (byte) 0xc0,(byte) 0xc0,(byte) 0xc0, 
-		(byte) 0xe0,(byte) 0xe0,(byte) 0xe0, (byte) 0xf0, (byte) 0xf0, (byte) 0xe0,(byte) 0xe0,(byte) 0xe0, 
-		(byte) 0xc0,(byte) 0xc0,(byte) 0xc0,(byte) 0x80,(byte) 0x80,(byte) 0x80 };
-	private static final byte[] right = { (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, 
+		(byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, 
+		(byte) 0x30, (byte) 0x10, (byte) 0x10, (byte) 0x10 };
+	private static final byte[] up = { 
+		0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x18,
+		(byte) 0x38, (byte) 0x78, (byte) 0x38, (byte) 
+		0x18, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0 };
+	private static final byte[] down = { 
+		(byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xc0,
+		(byte) 0xc0, (byte) 0xc0, (byte) 0xe0, (byte) 0xe0,
+		(byte) 0xe0, (byte) 0xf0, (byte) 0xf0, (byte) 0xe0,
+		(byte) 0xe0, (byte) 0xe0, (byte) 0xc0, (byte) 0xc0,
+		(byte) 0xc0, (byte) 0x80, (byte) 0x80, (byte) 0x80 };
+	private static final byte[] right = { 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0xf8, (byte) 0xf8, (byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
-	private static final byte[] left = { (byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+		(byte) 0x60, (byte) 0x60, (byte) 0xf8, (byte) 0xf8, 
+		(byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+	private static final byte[] left = { 
+		(byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
-	private static final byte[] up_eight = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x40, (byte) 0xff, (byte) 0x40, (byte) 0x20, 0, 0, 0, 0, 0,
+	private static final byte[] up_eight = { 
+		0, 0, 0, 0, 0, 0, 0, (byte) 0x20, (byte) 0x40, 
+		(byte) 0xff, (byte) 0x40, (byte) 0x20, 0, 0, 0, 0, 0,
 		0, 0, 0 };
-	private static final byte[] down_eight = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x04,
-		(byte) 0x02, (byte) 0xff, (byte) 0x02, (byte) 0x04, 0, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] right_eight = { 0, 0, 0, 0, 0, 0, (byte) 0x08,
-		(byte) 0x08, (byte) 0x49, (byte) 0x2a, (byte) 0x1c, (byte) 0x08, 0,
-		0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left_eight = { 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x1c,
-		(byte) 0x2a, (byte) 0x49, (byte) 0x08, (byte) 0x08, (byte) 0x08, 0,
-		0, 0, 0, 0, 0, 0, 0 };
+	private static final byte[] down_eight = { 
+		0, 0, 0, 0, 0, 0, 0, (byte) 0x04, (byte) 0x02, (byte) 0xff, 
+		(byte) 0x02, (byte) 0x04, 0, 0, 0, 0, 0, 0, 0, 0 };
+	private static final byte[] right_eight = { 
+		0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x08, (byte) 0x49, 
+		(byte) 0x2a, (byte) 0x1c, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0, 0 };
+	private static final byte[] left_eight = { 
+		0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x1c, (byte) 0x2a, (byte) 0x49, 
+		(byte) 0x08, (byte) 0x08, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
     // Intent request codes
@@ -201,7 +211,7 @@ public class TestActivity extends Activity {
 			}
 		});
 
-		// Initialize the send button with a listener that for click events
+		// Initialize the service button with a listener that for click events
 		mSendButton = (Button) findViewById(R.id.button_service);
 		mSendButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {

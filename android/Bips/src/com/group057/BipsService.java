@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -111,7 +112,7 @@ public class BipsService extends Service {
 	ArrayList<BipsImage>[] mImageQueue = (ArrayList<BipsImage>[]) new ArrayList[5];
 	
 	// The image currently being projected
-	protected BipsImage mCurrentImage;
+	protected BipsImage mCurrentImage = null;
 	
 	/** Important types and such for the scheduler **/
 	boolean mIsDestroyed = false;
@@ -169,12 +170,13 @@ public class BipsService extends Service {
 					if (D)
 						Log.i(TAG, "MESSAGE_STATE_CHANGE: (LISTENING) " + msg.arg1);
 					mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, msg.arg1, 0));
+					showDisconnectNotification();
 
 					break;
 				case BluetoothChatService.STATE_NONE:
 					if (D)
 						Log.i(TAG, "MESSAGE_STATE_CHANGE: (NONE) " + msg.arg1);
-
+						
 					break;
 				}
 				break;
@@ -219,7 +221,8 @@ public class BipsService extends Service {
 						API_IMAGE_PRIORITY), msg.getData().getInt(
 						API_IMAGE_TIME), msg.replyTo);
 				
-				mImageQueue[image.priority].add(image);				
+				mImageQueue[image.priority].add(image);		
+				
 				break;
 			case API_REQ_CANCEL_CURRENT_IMAGE:
 				if (D)
@@ -297,7 +300,40 @@ public class BipsService extends Service {
 	final Handler mHandler = new IncomingHandler();
 	final Runnable rSetIdle = new Runnable() {
 		public void run() {
+			Log.i(TAG, "Algostart");
 			mStatus = BipsStatus.IDLE;
+			// Stop the service if nobody is using it.
+			if (mClients.isEmpty())
+			{
+				stopSelf();
+			}
+			
+			// Stop thread if the service is destroyed
+			if (mIsDestroyed)
+				return;
+			 
+			int delay = 0;	// by default checks the queues once per second
+
+			mStatus = BipsStatus.BUSY;
+			mCurrentImage = null;
+			
+			// find the next image to service
+			for (int i = 0; i < mImageQueue.length; ++i) {
+				if (!mImageQueue[i].isEmpty()) {
+					Log.i(TAG, "Next image: priority " + i);
+					// Pop off the top of the queue to project
+					mCurrentImage = mImageQueue[i].remove(0);
+					break;
+				}
+			}
+
+			if (mCurrentImage != null) {
+				delay = mCurrentImage.time;
+				sendImage(mCurrentImage);
+				
+				// Set the service back to idle to repeat the algorithm
+				mHandler.postDelayed(rSetIdle, delay);
+			}
 		}
 	};
 
@@ -353,6 +389,7 @@ public class BipsService extends Service {
 		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
 		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		startActivity(deviceIntent);
+		
 		
 		setupChat();
 		/* This is handled by 3rd party now
@@ -424,8 +461,12 @@ public class BipsService extends Service {
 			// Add an image into the queues for projection
 			BipsImage bImage = new BipsImage(image, priority, time, pid);
 			
-			mImageQueue[bImage.priority].add(bImage);	
+			mImageQueue[bImage.priority].add(bImage);
 			
+			if (mCurrentImage == null)
+			{
+				mHandler.post(rSetIdle);
+			}
         }
         
         public void imageRequestCancelCurrent(int pid) {
@@ -436,7 +477,8 @@ public class BipsService extends Service {
 			// This is done by setting the service monitoring status to IDLE
 			if (mCurrentImage != null && pid == mCurrentImage.pid)
 			{
-				mHandler.post(rSetIdle);
+				// TODO Doesn't work
+				//mHandler.post(rSetIdle);
 			}
         }
         
@@ -496,7 +538,7 @@ public class BipsService extends Service {
         }
     };
 
-	/**
+    /**
 	 * Show a notification while this service is running.
 	 */
 	private void showNotification() {
@@ -512,7 +554,7 @@ public class BipsService extends Service {
 		// notification
 		/*PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
 				new Intent(this, TestActivity.class), 0);*/
-
+		noti.flags = Notification.FLAG_ONGOING_EVENT;
 		// Set the info for the views that show in the notification panel.
 		noti.setLatestEventInfo(this, getText(R.string.remote_service_label),
 				text, null);
@@ -520,6 +562,34 @@ public class BipsService extends Service {
 		// Send the notification.
 		// We use a string id because it is a unique number. We use it later to
 		// cancel.
+		mNM.notify(R.string.remote_service_started, noti);
+	}
+	
+	/**
+	 * Show a notification of BT disconnection
+	 */
+	private void showDisconnectNotification() {
+		// In this sample, we'll use the same text for the ticker and the
+		// expanded notification
+		CharSequence text = getText(R.string.not_connected);
+
+		// Set the icon, scrolling text and timestamp
+		Notification noti = new Notification(R.drawable.ic_launcher, text,
+				System.currentTimeMillis());
+
+		// The PendingIntent to launch our activity if the user selects this
+		// notification
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+				new Intent(this, DeviceListActivity.class), Intent.FLAG_ACTIVITY_NEW_TASK);
+		noti.flags = Notification.FLAG_ONGOING_EVENT;
+		// Set the info for the views that show in the notification panel.
+		noti.setLatestEventInfo(this, getText(R.string.remote_service_label),
+				text, contentIntent);
+
+		// Send the notification.
+		// We use a string id because it is a unique number. We use it later to
+		// cancel.
+		mNM.cancel(R.string.remote_service_started);
 		mNM.notify(R.string.remote_service_started, noti);
 	}
 
@@ -574,48 +644,9 @@ public class BipsService extends Service {
 		startActivity(deviceIntent);*/
 		
 		
-		
+		mHandler.post(rSetIdle);
 		// A separate thread for queue monitoring is created and then started.
-		messageMonitoring = performOnBackgroundThread(new Runnable(){
-			public void run() {
-				while (true) {
-					// Stop the service if nobody is using it.
-					if (mClients.isEmpty())
-					{
-						stopSelf();
-					}
-					
-					// Stop thread if the service is destroyed
-					if (mIsDestroyed)
-						return;
-					 
-					int delay = 0;	// by default checks the queues once per second
-
-					// Only perform the algorithm when the service is free
-					if (mStatus != BipsStatus.BUSY) {
-						mStatus = BipsStatus.BUSY;
-						mCurrentImage = null;
-						
-						// find the next image to service
-						for (int i = 0; i < mImageQueue.length; ++i) {
-							if (!mImageQueue[i].isEmpty()) {
-								Log.i(TAG, "Next image: priority " + i);
-								// Pop off the top of the queue to project
-								mCurrentImage = mImageQueue[i].remove(0);
-								break;
-							}
-						}
-
-						if (mCurrentImage != null) {
-							delay = mCurrentImage.time;
-							sendImage(mCurrentImage);
-						}
-						// Set the service back to idle to repeat the algorithm
-						mHandler.postDelayed(rSetIdle, delay);
-					}
-				}
-			}
-		});
+		//messageMonitoring = performOnBackgroundThread(rSetIdle);
 	}
 
 	public static Thread performOnBackgroundThread(final Runnable runnable) {

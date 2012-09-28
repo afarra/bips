@@ -33,7 +33,7 @@
     <string name="discoverable">Make discoverable</string>
     
     <!-- BipsService -->
-    <string name="remote_service_label">BIPS: Remote Service Label</string>
+    <string name="remote_service_label">Bicycle Projection Service</string>
     <string name="remote_service_started">BIPS: Remote Service Started</string>
     <string name="remote_service_stopped">BIPS: Remote Service Stopped</string>
     <string name="not_connected">Not connected.</string>
