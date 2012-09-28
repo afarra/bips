@@ -312,7 +312,7 @@ public class BipsService extends Service {
 			if (mIsDestroyed)
 				return;
 			 
-			int delay = 0;	// by default checks the queues once per second
+			int delay = 0;
 
 			mStatus = BipsStatus.BUSY;
 			mCurrentImage = null;
@@ -332,7 +332,10 @@ public class BipsService extends Service {
 				sendImage(mCurrentImage);
 				
 				// Set the service back to idle to repeat the algorithm
-				mHandler.postDelayed(rSetIdle, delay);
+				if (delay != 0)
+				{
+					mHandler.postDelayed(rSetIdle, delay);
+				}
 			}
 		}
 	};
@@ -391,7 +394,7 @@ public class BipsService extends Service {
 		startActivity(deviceIntent);
 		
 		
-		setupChat();
+		//setupChat();
 		/* This is handled by 3rd party now
 		// If BT is not on, request that it be enabled.
 		// setupChat() will then be called during onActivityResult
@@ -477,14 +480,29 @@ public class BipsService extends Service {
 			// This is done by setting the service monitoring status to IDLE
 			if (mCurrentImage != null && pid == mCurrentImage.pid)
 			{
-				// TODO Doesn't work
-				//mHandler.post(rSetIdle);
+				// sending a preempting blank image
+				BipsImage bImage = new BipsImage();
+				mImageQueue[bImage.priority].add(0,bImage);
+				mHandler.postAtFrontOfQueue(rSetIdle);
 			}
         }
         
         public void imageRequestCancelAll(int pid) {
+
+			if (D)
+				Log.i(TAG, "CancellAll: Canceling current image: PID " + pid);
+			// Cancel the current projected image if it is from the requesting application
+			// This is done by setting the service monitoring status to IDLE
+			if (mCurrentImage != null && pid == mCurrentImage.pid)
+			{
+				// sending a preempting blank image
+				BipsImage bImage = new BipsImage();
+				mImageQueue[bImage.priority].add(0,bImage);
+				mHandler.postAtFrontOfQueue(rSetIdle);
+			}
+        	
         	if (D)
-				Log.i(TAG, "Cancelling all images: PID " + pid);
+				Log.i(TAG, "Cancelling all queued images: PID " + pid);
 			// Cancel all the images in the queues from this application
 			// Search through all priority queues for images with matching messenger and remove
 			for( int i = 0; i < mImageQueue.length; ++i)
@@ -501,6 +519,7 @@ public class BipsService extends Service {
 					}
 				}
 			}
+			
         }
         
         public void deviceChosenConnect(String address) {
