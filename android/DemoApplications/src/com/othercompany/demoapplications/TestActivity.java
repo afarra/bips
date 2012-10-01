@@ -94,7 +94,7 @@ public class TestActivity extends Activity {
 	/** Some text view we are using to show state information. */
 	static TextView mCallbackText;
 	// Layout Views
-	private Button mSendButton;
+	private Button mStartServiceButton;
 	private Button mSendImageButton;
 	private Button mCancelCurrentButton;
 	private Button mCancelAllButton;
@@ -139,19 +139,7 @@ public class TestActivity extends Activity {
 				mImageChosen = getImageFromRadio(mImageRadio);
 				if (mImageChosen != null && mPriorityChosen >= 0
 						&& mDurationText.getText() != null) {
-/*
-					Message msg = BipsService.createImageRequestMessage(
-							mImageChosen, (int) Integer.parseInt(mDurationText
-									.getText().toString()), mPriorityChosen,
-							mMessenger);
 
-					// send off the message
-					try {
-						mService.send(msg);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
 	                try {
 	        			mIRemoteService.imageRequestQueue(mImageChosen, Integer.parseInt(mDurationText
 								.getText().toString()), mPriorityChosen, Process.myPid());
@@ -169,13 +157,6 @@ public class TestActivity extends Activity {
 		mCancelCurrentButton.setEnabled(false);
 		mCancelCurrentButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				/*
-				 * Message msg =
-				 * BipsService.cancelCurrentImageRequestMessage(mMessenger); //
-				 * send off the message try { mService.send(msg); } catch
-				 * (RemoteException e) { // TODO Auto-generated catch block
-				 * e.printStackTrace(); }
-				 */
 				try {
 					mIRemoteService.imageRequestCancelCurrent(Process.myPid());
 				} catch (RemoteException e) {
@@ -190,16 +171,7 @@ public class TestActivity extends Activity {
 		mCancelAllButton.setEnabled(false);
 		mCancelAllButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-/*
-					Message msg = BipsService.cancelAllImagesRequestMessage(mMessenger);
 
-					// send off the message
-					try {
-						mService.send(msg);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
 				
 				try {
 					mIRemoteService.imageRequestCancelAll(Process.myPid());
@@ -212,8 +184,8 @@ public class TestActivity extends Activity {
 		});
 
 		// Initialize the service button with a listener that for click events
-		mSendButton = (Button) findViewById(R.id.button_service);
-		mSendButton.setOnClickListener(new OnClickListener() {
+		mStartServiceButton = (Button) findViewById(R.id.button_service);
+		mStartServiceButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 		        // If BT is not on, request that it be enabled.
 		        // setupChat() will then be called during onActivityResult
@@ -270,7 +242,7 @@ public class TestActivity extends Activity {
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final IncomingHandler mHandler = new IncomingHandler();
+	final Handler mHandler = new Handler();
 	final Messenger mMessenger = new Messenger(mHandler);
 
 	/**
@@ -307,53 +279,6 @@ public class TestActivity extends Activity {
 	        mIRemoteService = null;
 	    }
 	};
-/*	private ServiceConnection mConnection = new ServiceConnection() {
-		public void onServiceConnected(ComponentName className, IBinder service) {
-			// This is called when the connection with the service has been
-			// established, giving us the service object we can use to
-			// interact with the service. We are communicating with our
-			// service through an IDL interface, so get a client-side
-			// representation of that from the raw service object.
-			mService = new Messenger(service);
-			mCallbackText.setText("Attached.");
-
-			// We want to monitor the service for as long as we are
-			// connected to it.
-			try {
-				Message msg = Message.obtain(null,
-						BipsService.MSG_REGISTER_CLIENT);
-				msg.replyTo = mMessenger;
-				mService.send(msg);
-
-				// Give it some value as an example.
-				msg = Message.obtain(null, BipsService.MSG_SET_VALUE,
-						this.hashCode(), 0);
-				mService.send(msg);
-			} catch (RemoteException e) {
-				// In this case the service has crashed before we could even
-				// do anything with it; we can count on soon being
-				// disconnected (and then reconnected if it can be restarted)
-				// so there is no need to do anything here.
-			}
-
-			// As part of the sample, tell the user what happened.
-			// Toast.makeText(this, R.string.remote_service_connected,
-			// Toast.LENGTH_SHORT).show();
-		}
-
-		public void onServiceDisconnected(ComponentName className) {
-			// This is called when the connection with the service has been
-			// unexpectedly disconnected -- that is, its process crashed.
-			mService = null;
-			mCallbackText.setText("Disconnected.");
-
-			// As part of the sample, tell the user what happened.
-			// Toast.makeText(this, R.string.remote_service_disconnected,
-			// Toast.LENGTH_SHORT).show();
-		}
-	};
-*/
-	
 
     
 	void doBindService() {

@@ -81,6 +81,7 @@ public class DeviceListActivity extends Activity {
 
         // Setup the window
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.device_list);
 
         // Set result CANCELED in case the user backs out
@@ -192,18 +193,8 @@ public class DeviceListActivity extends Activity {
 
             // Set result and finish this Activity
             setResult(Activity.RESULT_OK, intent);
-/*            
+          
             // Give the BIPS the BT device to connect to 
-            Message msg = Message.obtain(null,
-                    BipsService.REQUEST_CONNECT_DEVICE_SECURE, intent);
-            try {
-				mService.send(msg);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-            */
-            
             try {
 				mIRemoteService.deviceChosenConnect(address);
 			} catch (RemoteException e) {
@@ -249,7 +240,7 @@ public class DeviceListActivity extends Activity {
 	 * Handler of incoming messages from service.
 	 */
 	class IncomingHandler extends Handler {
-	    @Override
+	    /*@Override
 	    public void handleMessage(Message msg) {
 	        switch (msg.what) {
 	            case BipsService.MSG_SET_VALUE:
@@ -258,7 +249,7 @@ public class DeviceListActivity extends Activity {
 	            default:
 	                super.handleMessage(msg);
 	        }
-	    }
+	    }*/
 	}
 
 	/**
