@@ -30,7 +30,6 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
@@ -45,8 +44,6 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.group057.IRemoteService;
 
 /**
  * This Activity appears as a dialog. It lists any paired devices and
@@ -78,7 +75,7 @@ public class DeviceListActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        
         // Setup the window
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -255,7 +252,7 @@ public class DeviceListActivity extends Activity {
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final IncomingHandler mHandler = new IncomingHandler();
+	final Handler mHandler = new Handler();
 	final Messenger mMessenger = new Messenger(mHandler);
 
 

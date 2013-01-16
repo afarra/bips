@@ -108,7 +108,7 @@ public class BipsService extends Service {
 
 	/** The message priority queue **/
 	// use index as priority (high = 0, low = 4). Then you can use the resulting
-	// queue
+	// queue. Not sure how to create an ArrayList of BipsImages without warning.
 	ArrayList<BipsImage>[] mImageQueue = (ArrayList<BipsImage>[]) new ArrayList[5];
 	
 	// The image currently being projected
@@ -126,7 +126,6 @@ public class BipsService extends Service {
 	final Handler mHandler = new Handler();
 	final Runnable rSetIdle = new Runnable() {
 		public void run() {
-			mStatus = BipsStatus.IDLE;
 			// Stop the service if nobody is using it.
 			if (mClients.isEmpty())
 			{
@@ -139,7 +138,6 @@ public class BipsService extends Service {
 			 
 			int delay = 0;
 
-			mStatus = BipsStatus.BUSY;
 			mCurrentImage = null;
 			
 			// find the next image to service
@@ -156,7 +154,7 @@ public class BipsService extends Service {
 				delay = mCurrentImage.time;
 				sendImage(mCurrentImage);
 				
-				// Set the service back to idle to repeat the algorithm
+				// Check for an image after the image time length elapses
 				if (delay != 0)
 				{
 					mHandler.postDelayed(rSetIdle, delay);
@@ -173,14 +171,16 @@ public class BipsService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-		// Display a notification about us starting.
-		showNotification();
-
+		
 		if (D){
 			Log.e(TAG, "+++ ON CREATE +++");
 			//android.os.Debug.waitForDebugger();
 		}
+		
+		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+		// Display a notification about us starting.
+		showNotification(getText(R.string.remote_service_started));
+		
 		// Get local Bluetooth adapter
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -200,45 +200,22 @@ public class BipsService extends Service {
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
 
-		if (mChatService != null) {
-            // Only if the state is STATE_NONE, do we know that we haven't started already
-            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
-
-        		if (D){
-        			Log.e(TAG, "Service starting BT threads");
-        		}
-        		
-              // Start the Bluetooth chat services
-              mChatService.start();
-            }
-        }
-		
-		// Get the paired device.
-		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
-		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(deviceIntent);
+//		if (mChatService != null) {
+//            // Only if the state is STATE_NONE, do we know that we haven't started already
+//            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
+//
+//        		if (D) {
+//        			Log.e(TAG, "Service starting BT threads");
+//        		}
+//        		
+//        		// Start the Bluetooth chat services
+//        		mChatService.start();
+//            }
+//        }
 		
 		
 		//setupChat();
-		/* This is handled by 3rd party now
-		// If BT is not on, request that it be enabled.
-		// setupChat() will then be called during onActivityResult
-		if (!mBluetoothAdapter.isEnabled()) {
-			Intent enableIntent = new Intent(
-					BluetoothAdapter.ACTION_REQUEST_ENABLE);
-			enableIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-			startActivity(enableIntent);
-			// Otherwise, setup the chat session
-		}
 		
-
-		// TODO: This does not properly get launched if BT needed to be enabled.
-		if (mBluetoothAdapter.isEnabled()) {
-			// Let them choose the device to pair with if BT enabled.
-			if (mChatService == null)
-				setupChat();
-		}
-		*/
 		
 		
 	}
@@ -338,8 +315,7 @@ public class BipsService extends Service {
 					{
 						if (D)
 							Log.i(TAG, "Cancelled");
-						BipsImage image = mImageQueue[i].remove(j);
-						image = null;
+						mImageQueue[i].remove(j);
 						--j;	// decrement since the next index will be pushed forward to the just removed one
 					}
 				}
@@ -351,6 +327,8 @@ public class BipsService extends Service {
         	// When DeviceListActivity returns with a device to connect
 			// Get the BluetoothDevice object
 			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+			showNotification(getText(com.group057.R.string.selected_bt_device) + device.getName());
+			
 			// Attempt to connect to the device
 			mChatService.connect(device, true);
         }
@@ -385,46 +363,19 @@ public class BipsService extends Service {
     /**
 	 * Show a notification while this service is running.
 	 */
-	private void showNotification() {
+	private void showNotification(CharSequence text) {
 		// In this sample, we'll use the same text for the ticker and the
 		// expanded notification
-		CharSequence text = getText(R.string.remote_service_started);
 
 		// Set the icon, scrolling text and timestamp
-		Notification noti = new Notification(R.drawable.ic_launcher, text,
-				System.currentTimeMillis());
-
-		// The PendingIntent to launch our activity if the user selects this
-		// notification
-		/*PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-				new Intent(this, TestActivity.class), 0);*/
-		noti.flags = Notification.FLAG_ONGOING_EVENT;
-		// Set the info for the views that show in the notification panel.
-		noti.setLatestEventInfo(this, getText(R.string.remote_service_label),
-				text, null);
-
-		// Send the notification.
-		// We use a string id because it is a unique number. We use it later to
-		// cancel.
-		mNM.notify(R.string.remote_service_started, noti);
-	}
-	
-	/**
-	 * Show a notification of BT disconnection
-	 */
-	private void showDisconnectNotification() {
-		// In this sample, we'll use the same text for the ticker and the
-		// expanded notification
-		CharSequence text = getText(R.string.not_connected);
-
-		// Set the icon, scrolling text and timestamp
-		Notification noti = new Notification(R.drawable.ic_launcher, text,
+		Notification noti = new Notification(R.drawable.ic_launcher, 
+		        text,
 				System.currentTimeMillis());
 
 		// The PendingIntent to launch our activity if the user selects this
 		// notification
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-				new Intent(this, DeviceListActivity.class), Intent.FLAG_ACTIVITY_NEW_TASK);
+				new Intent(this, com.group057.BipsMainActivity.class), Notification.FLAG_ONGOING_EVENT);
 		noti.flags = Notification.FLAG_ONGOING_EVENT;
 		// Set the info for the views that show in the notification panel.
 		noti.setLatestEventInfo(this, getText(R.string.remote_service_label),
@@ -433,10 +384,10 @@ public class BipsService extends Service {
 		// Send the notification.
 		// We use a string id because it is a unique number. We use it later to
 		// cancel.
-		mNM.cancel(R.string.remote_service_started);
-		mNM.notify(R.string.remote_service_started, noti);
+//        startForeground(R.string.remote_service_started, noti);
+        mNM.notify(R.string.remote_service_started, noti);
 	}
-
+	
 	/**
 	 * Sends an image.
 	 * 
@@ -465,7 +416,7 @@ public class BipsService extends Service {
 	private void connectDevice(Intent data, boolean secure) {
 		// Get the device MAC address
 		String address = data.getExtras().getString(
-				DeviceListActivity.EXTRA_DEVICE_ADDRESS);
+				com.group057.DeviceListActivity.EXTRA_DEVICE_ADDRESS);
 		// Get the BluetoothDevice object
 		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
 		// Attempt to connect to the device

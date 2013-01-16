@@ -3,7 +3,9 @@
     android:versionCode="1"
     android:versionName="1.0" >
 
-    <uses-sdk android:minSdkVersion="10" />
+    <uses-sdk 
+        android:minSdkVersion="10"
+        android:targetSdkVersion="10" />
 
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -21,15 +23,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="com.group057.DeviceListActivity"
-            android:configChanges="orientation|keyboardHidden" 
-            android:screenOrientation="portrait" />
-       <service android:name="com.group057.BipsService" >
+        
+        <!-- Required in manifest to use BIPS -->
+        <service android:name="com.group057.BipsService" >
             <intent-filter>
                 <action android:name="com.group057.IRemoteService" />
             </intent-filter>
         </service>
+
+        <activity
+            android:name="com.group057.BipsMainActivity"
+            android:label="@string/title_activity_bips_main" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.group057.DeviceListActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:label="@string/select_device" >
+        </activity>
     </application>
 
 </manifest>

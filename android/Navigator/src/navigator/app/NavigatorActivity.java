@@ -19,7 +19,6 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.android.maps.GeoPoint;
-import com.group057.BipsService;
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
 
@@ -563,13 +562,13 @@ public class NavigatorActivity extends Activity{
     	static class IncomingHandler extends Handler {
     	   @Override
     	   public void handleMessage(Message msg) {
-    	       switch (msg.what) {
+    	       /*switch (msg.what) {
     	           case BipsService.MSG_SET_VALUE:
     	               //mCallbackText.setText("Received from service: " + msg.arg1);
     	               break;
     	           default:
     	               super.handleMessage(msg);
-    	       }
+    	       }*/
     	   }
     	}
 
@@ -630,7 +629,7 @@ public class NavigatorActivity extends Activity{
              * to update the UI, we need to use a Handler to hop over there.
              */
             public void valueChanged(int value) {
-                mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+                mHandler.sendMessage(mHandler.obtainMessage(0, value, 0));
             }
         };
 

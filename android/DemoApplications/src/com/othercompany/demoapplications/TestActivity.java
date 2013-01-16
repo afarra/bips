@@ -27,7 +27,6 @@ import android.widget.Toast;
 import com.group057.BipsService;
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
-import com.group057.R;
 
 public class TestActivity extends Activity {
 	// Debugging
@@ -187,7 +186,7 @@ public class TestActivity extends Activity {
 		mStartServiceButton = (Button) findViewById(R.id.button_service);
 		mStartServiceButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-		        // If BT is not on, request that it be enabled.
+		        /*// If BT is not on, request that it be enabled.
 		        // setupChat() will then be called during onActivityResult
 		        if (!mBluetoothAdapter.isEnabled()) {
 		            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -197,8 +196,8 @@ public class TestActivity extends Activity {
 
 					// Bind Bips
 					doBindService();
-		        }
-		        
+		        }*/
+		        doBindService();
 		        
 				mSendImageButton.setEnabled(true);
 				mCancelAllButton.setEnabled(true);
@@ -270,7 +269,6 @@ public class TestActivity extends Activity {
 				// disconnected (and then reconnected if it can be restarted)
 				// so there is no need to do anything here.
 			}
-
 	    }
 
 	    // Called when the connection with the service disconnects unexpectedly
@@ -342,22 +340,22 @@ public class TestActivity extends Activity {
 		return BipsService.API_MEDIUM_PRIORITY;
 	}
 	
-
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(D) Log.d(TAG, "onActivityResult " + resultCode);
-        switch (requestCode) {
-        case REQUEST_ENABLE_BT:
-            // When the request to enable Bluetooth returns
-            if (resultCode == Activity.RESULT_OK) {
-                // Bluetooth is now enabled, so set up a chat session
-                doBindService();
-            } else {
-                // User did not enable Bluetooth or an error occurred
-                Log.d(TAG, "BT not enabled");
-                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+//
+//	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        if(D) Log.d(TAG, "onActivityResult " + resultCode);
+//        switch (requestCode) {
+//        case REQUEST_ENABLE_BT:
+//            // When the request to enable Bluetooth returns
+//            if (resultCode == Activity.RESULT_OK) {
+//                // Bluetooth is now enabled, so bind to the BIPS Android service
+//                doBindService();
+//            } else {
+//                // User did not enable Bluetooth or an error occurred
+//                Log.d(TAG, "BT not enabled");
+//                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
 	
 
     // ----------------------------------------------------------------------

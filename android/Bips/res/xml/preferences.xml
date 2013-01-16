@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <Preference
+        android:summary="Tap to start activity"
+        android:title="Tap me" >
+        <intent
+            android:action="com.group057.intent.action.DEVICE" 
+            android:targetClass="com.group057.DeviceListActivity" 
+            android:targetPackage="com.group057" />
+    </Preference>
+
+</PreferenceScreen> 

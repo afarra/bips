@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CallAlert</string>
+    <string name="service_button">Service Button</string>
 </resources>
