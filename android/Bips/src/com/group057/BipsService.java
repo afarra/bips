@@ -10,6 +10,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -89,6 +90,8 @@ public class BipsService extends Service {
 	// Debug message to send an image over BT
 	public static final int DEBUG_SEND_IMAGE = 20;
 
+	private static final int BIPS_IMAGE_WIDTH = 20;
+
 	// Name of the connected device
 	private String mConnectedDeviceName = null;
 	// Local Bluetooth adapter
@@ -109,8 +112,10 @@ public class BipsService extends Service {
 	/** The message priority queue **/
 	// use index as priority (high = 0, low = 4). Then you can use the resulting
 	// queue. Not sure how to create an ArrayList of BipsImages without warning.
-	ArrayList<BipsImage>[] mImageQueue = (ArrayList<BipsImage>[]) new ArrayList[5];
+	ArrayList<BipsImage>[] mImageQueue = (ArrayList<BipsImage>[]) new ArrayList[API_LOWEST_PRIORITY + 1];
 	
+	
+	ArrayList<ArrayList<Object>> mImageQueue2;
 	// The image currently being projected
 	protected BipsImage mCurrentImage = null;
 	
@@ -193,10 +198,13 @@ public class BipsService extends Service {
 			return;
 		}
 		
+		
 		// initialize the priority queues
 		for (int i = 0; i < mImageQueue.length; i++) {
 			mImageQueue[i] = new ArrayList<BipsImage>();
 		}
+		
+		
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
 
@@ -358,6 +366,22 @@ public class BipsService extends Service {
 				}
 			}
         }
+        @Override
+        public void bitmapRequestQueue(Bitmap image, int time, byte priority, int pid)
+        {
+            if (D)
+                Log.i(TAG, "Queuing bitmap: time " + time + " PID: " + pid);
+            // Add an image into the queues for projection
+            byte[] imageArray = bitmapToByteArray(image);
+            BipsImage bImage = new BipsImage(imageArray, priority, time, pid);
+            
+            mImageQueue[bImage.priority].add(bImage);
+            
+            if (mCurrentImage == null)
+            {
+                mHandler.post(rSetIdle);
+            }
+        }
     };
 
     /**
@@ -459,6 +483,34 @@ public class BipsService extends Service {
 	    return t;
 	}
 	
+    public byte[] bitmapToByteArray(Bitmap b) {
+        byte[] imageArray = new byte[BIPS_IMAGE_WIDTH];
+
+        for (int i = 0; i < b.getWidth(); ++i) {
+            // start off the column as full black
+            byte column = (byte) 0xff;
+
+            for (int j = 0; j < b.getHeight(); ++j) {
+                // update the column for each pixel, where the XOR will
+                // be used to designate the bit/pixel as blank
+                // and the OR will be used to indicate a displaying signal
+
+                // minus 1 from the height to shift to the MSB (first iteration)
+                // minus j to shift to somewherein the middle
+                byte position = (byte) (1 << b.getHeight() - j - 1);
+                if (b.getPixel(i, j) == -1) {
+                    column = (byte) (position ^ column);
+                } else {
+                    column = (byte) (position | column);
+                }
+            }
+            imageArray[i] = column;
+        }
+
+        return imageArray;
+    }
+
+
 	/** 
 	 * This call takes in the fields required for projecting the image to formulate a Message that 
 	 * can be sent to BIPS Service to queue up for laser projection

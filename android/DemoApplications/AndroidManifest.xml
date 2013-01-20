@@ -32,16 +32,14 @@
         </service>
 
         <activity
-            android:name="com.group057.BipsMainActivity"
-            android:label="@string/title_activity_bips_main" >
+            android:name="com.group057.BipsMainActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
         <activity
             android:name="com.group057.DeviceListActivity"
-            android:configChanges="orientation|keyboardHidden"
-            android:label="@string/select_device" >
+            android:configChanges="orientation|keyboardHidden" >
         </activity>
     </application>
 

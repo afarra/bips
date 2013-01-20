@@ -3,6 +3,7 @@ package com.group057;
 
 // Declare any non-default types here with import statements
 import com.group057.IRemoteServiceCallback;
+import android.graphics.Bitmap;
 
 /** Example service interface */
 interface IRemoteService {
@@ -15,7 +16,8 @@ interface IRemoteService {
     void basicTypes(int anInt, long aLong, boolean aBoolean, float aFloat,
             double aDouble, String aString);
 
-    void imageRequestQueue(in byte[] image, int time, byte priority, int pid);        
+    void imageRequestQueue(in byte[] image, int time, byte priority, int pid); 
+    void bitmapRequestQueue(in Bitmap image, int time, byte priority, int pid);        
     void imageRequestCancelCurrent(int pid);        
     void imageRequestCancelAll(int pid);
     void deviceChosenConnect(String address);

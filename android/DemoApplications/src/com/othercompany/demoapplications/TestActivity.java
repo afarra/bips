@@ -9,22 +9,19 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.group057.BipsService;
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
 
@@ -224,7 +221,7 @@ public class TestActivity extends Activity {
 
 	/**
 	 * Handler of incoming messages from service.
-	 */
+	 
 	static class IncomingHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
@@ -236,7 +233,7 @@ public class TestActivity extends Activity {
 				super.handleMessage(msg);
 			}
 		}
-	}
+	}*/
 
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
@@ -330,14 +327,14 @@ public class TestActivity extends Activity {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
 		if (temp.getText().toString().startsWith("Highe"))
-			return BipsService.API_HIGHEST_PRIORITY;
+			return 0;
 		if (temp.getText().toString().startsWith("Lowe"))
-			return BipsService.API_LOWEST_PRIORITY;
+			return 4;
 		if (temp.getText().toString().startsWith("Low"))
-			return BipsService.API_LOW_PRIORITY;
+			return 3;
 		if (temp.getText().toString().startsWith("High"))
-			return BipsService.API_HIGH_PRIORITY;
-		return BipsService.API_MEDIUM_PRIORITY;
+			return 1;
+		return 2;
 	}
 	
 //
@@ -379,7 +376,7 @@ public class TestActivity extends Activity {
          * to update the UI, we need to use a Handler to hop over there.
          */
         public void valueChanged(int value) {
-            mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+            mHandler.sendMessage(mHandler.obtainMessage(0, value, 0));
         }
     };
 }
