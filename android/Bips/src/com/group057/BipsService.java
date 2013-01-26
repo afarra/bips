@@ -3,6 +3,7 @@ package com.group057;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
+import android.R.integer;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -10,6 +11,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -36,9 +38,9 @@ public class BipsService extends Service {
 	public static final String API_IMAGE_TIME = "image_time";
 	public static final String API_IMAGE_PIXELS = "image_pixels";
 
-	// Status values for mStatus
-	private static BipsStatus mStatus = BipsStatus.IDLE;
-
+	// Preferences name
+	private static final String BIPS_PREFS = "BipsPreferences";
+	
 	enum BipsStatus {
 		IDLE, BUSY
 	}
@@ -90,21 +92,20 @@ public class BipsService extends Service {
 	// Debug message to send an image over BT
 	public static final int DEBUG_SEND_IMAGE = 20;
 
-	private static final int BIPS_IMAGE_WIDTH = 20;
+    private static final int BIPS_IMAGE_WIDTH = 20;
+    private static final int BIPS_IMAGE_HEIGHT = 8;
 
-	// Name of the connected device
-	private String mConnectedDeviceName = null;
 	// Local Bluetooth adapter
 	private BluetoothAdapter mBluetoothAdapter = null;
 	// Member object for the chat services
 	private BluetoothChatService mChatService = null;
-	// Buffer taking in the serial data and forming into a chat line
-	private String readBufString = null;
+
+	// For keeping track of application priorities
+	private SharedPreferences mSettings = null;
 
 	/** For showing and hiding our notification. */
 	NotificationManager mNM;
 	/** Keeps track of all current registered clients. */
-	ArrayList<Messenger> mClients = new ArrayList<Messenger>();
 	ArrayList<IRemoteServiceCallback> mClientsAidl = new ArrayList<IRemoteServiceCallback>();
 	/** Holds last value set by a client. */
 	int mValue = 0;
@@ -132,7 +133,7 @@ public class BipsService extends Service {
 	final Runnable rSetIdle = new Runnable() {
 		public void run() {
 			// Stop the service if nobody is using it.
-			if (mClients.isEmpty())
+			if (mClientsAidl.isEmpty())
 			{
 				stopSelf();
 			}
@@ -208,6 +209,7 @@ public class BipsService extends Service {
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
 
+		
 //		if (mChatService != null) {
 //            // Only if the state is STATE_NONE, do we know that we haven't started already
 //            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
@@ -345,6 +347,39 @@ public class BipsService extends Service {
 			if (D)
 				Log.i(TAG, "Added client callback: " + client.toString());
 			mClientsAidl.add(client);
+			
+			
+			// Add the client to preferences if they don't exist yet
+            SharedPreferences settings = getSharedPreferences(BIPS_PREFS, 0);
+            String clientPackage = null;
+            
+            // Request the client's package name for identifying it
+            try 
+            {
+                clientPackage = client.getClientPackageName();
+            }
+            catch (RemoteException e) 
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            
+            if (clientPackage != null)
+            {
+                // a new application is binding, add it to preferences
+                if (!settings.contains(clientPackage))
+                {
+                    SharedPreferences.Editor editor = settings.edit();
+    
+                    editor.putInt(clientPackage, API_MEDIUM_PRIORITY);
+    
+                    editor.commit();
+                    if (D)
+                        Log.v(TAG, "New client to priority prefs: " + clientPackage);
+                }
+            }
+            
+			
 		}
 
         public void unregisterCallback(IRemoteServiceCallback client) {
@@ -372,14 +407,18 @@ public class BipsService extends Service {
             if (D)
                 Log.i(TAG, "Queuing bitmap: time " + time + " PID: " + pid);
             // Add an image into the queues for projection
-            byte[] imageArray = bitmapToByteArray(image);
-            BipsImage bImage = new BipsImage(imageArray, priority, time, pid);
-            
-            mImageQueue[bImage.priority].add(bImage);
-            
-            if (mCurrentImage == null)
+            if (image.getHeight() == BIPS_IMAGE_HEIGHT && image.getWidth() == BIPS_IMAGE_WIDTH)
             {
-                mHandler.post(rSetIdle);
+                
+                byte[] imageArray = bitmapToByteArray(image);
+                BipsImage bImage = new BipsImage(imageArray, priority, time, pid);
+                
+                mImageQueue[bImage.priority].add(bImage);
+                
+                if (mCurrentImage == null)
+                {
+                    mHandler.post(rSetIdle);
+                }
             }
         }
     };

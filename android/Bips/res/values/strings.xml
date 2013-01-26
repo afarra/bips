@@ -46,6 +46,7 @@
     <string name="title_activity_bips_main">BipsMainActivity</string>
 
     <!-- BipsMainActivity -->
-    <string name="enable_projection_button_text">Select BIPS Device</string>
+    <string name="choose_device_button_text">Select BIPS Device</string>
+    <string name="enable_bt_button_text">Enable Bluetooth</string>
 
 </resources>

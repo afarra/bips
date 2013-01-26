@@ -388,6 +388,16 @@ public class DeviceListActivity extends Activity {
         public void valueChanged(int value) {
             mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
         }
+        
+        /**
+         * This is called by the service to find out what applications are binding
+         * and using the projector to allow the user to assign priority to 
+         * which applications they prefer to see from the projector over other apps.
+         */
+        public String getClientPackageName()
+        {
+            return getPackageName();
+        }
     };
     
 }

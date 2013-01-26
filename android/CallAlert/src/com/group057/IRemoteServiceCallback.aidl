@@ -7,6 +7,7 @@ package com.group057;
 interface IRemoteServiceCallback {
     /** Request the process ID of this service, to do evil things with it. */
     int getPid();
+    String getClientPackageName();
 
     void valueChanged(int value);
 }

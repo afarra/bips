@@ -10,11 +10,11 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Process;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Messenger;
+import android.os.Process;
 import android.os.RemoteException;
 import android.provider.ContactsContract;
 import android.telephony.PhoneStateListener;
@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
+
 
 public class CallAlert extends Activity{
 	// Debug var
@@ -180,7 +181,7 @@ public class CallAlert extends Activity{
 	{
 		super.onCreate(savedInstanceState);
 		if (D)
-			Log.e(TAG, "+++ ON CREATE +++");
+			Log.v(TAG, "+++ ON CREATE +++");
 		
         // Get the local Bluetooth adapter
         // mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -197,7 +198,7 @@ public class CallAlert extends Activity{
 	public void onStart() {
 		super.onStart();
 		if (D)
-			Log.e(TAG, "++ ON START ++");
+			Log.v(TAG, "++ ON START ++");
 		
 		
 		// Initialize the service button with a listener that for click events
@@ -216,14 +217,14 @@ public class CallAlert extends Activity{
 	public synchronized void onResume() {
 		super.onResume();
 		if (D)
-			Log.e(TAG, "+ ON RESUME +");
+			Log.v(TAG, "+ ON RESUME +");
 	}
 
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
 		if (D)
-			Log.e(TAG, "+ ON DESTROY +");
+			Log.v(TAG, "+ ON DESTROY +");
 		doUnbindService();
 	}
 
@@ -317,6 +318,16 @@ public class CallAlert extends Activity{
          */
         public void valueChanged(int value) {
             mHandler.sendMessage(mHandler.obtainMessage(0, value, 0));
+        }
+
+        /**
+         * This is called by the service to find out what applications are binding
+         * and using the projector to allow the user to assign priority to 
+         * which applications they prefer to see from the projector over other apps.
+         */
+        public String getClientPackageName()
+        {
+            return getPackageName();
         }
     };
 }

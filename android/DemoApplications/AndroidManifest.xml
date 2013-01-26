@@ -30,17 +30,6 @@
                 <action android:name="com.group057.IRemoteService" />
             </intent-filter>
         </service>
-
-        <activity
-            android:name="com.group057.BipsMainActivity" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="com.group057.DeviceListActivity"
-            android:configChanges="orientation|keyboardHidden" >
-        </activity>
     </application>
 
 </manifest>
