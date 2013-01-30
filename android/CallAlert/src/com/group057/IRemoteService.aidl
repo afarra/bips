@@ -16,10 +16,10 @@ interface IRemoteService {
     void basicTypes(int anInt, long aLong, boolean aBoolean, float aFloat,
             double aDouble, String aString);
 
-    void imageRequestQueue(in byte[] image, int time, byte priority, int pid); 
-    void bitmapRequestQueue(in Bitmap image, int time, byte priority, int pid);        
-    void imageRequestCancelCurrent(int pid);        
-    void imageRequestCancelAll(int pid);
+    void imageRequestQueue(in byte[] image, int time, byte priority, String packageName); 
+    void bitmapRequestQueue(in Bitmap image, int time, byte priority, String packageName);        
+    void imageRequestCancelCurrent(String packageName);        
+    void imageRequestCancelAll(String packageName);
     void deviceChosenConnect(String address);
     void registerCallback(IRemoteServiceCallback client);
     void unregisterCallback(IRemoteServiceCallback client);

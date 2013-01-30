@@ -14,6 +14,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -25,25 +26,40 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 enum BipsPriority {Highest, High, Medium, Low, Lowest};
 
+// Used to populate the ListView of the activity
 class BipsClientListRowInfo 
 {
     Drawable appIcon;
     String appLabel;
+    String appPackage;
     int appPriority;
     
-    public BipsClientListRowInfo(Drawable i, String l, int p) {
+    public BipsClientListRowInfo(Drawable i, String l, String pkg, int p) {
         appIcon = i;
         appLabel = l;
+        appPackage = pkg;
         appPriority = p;
     }
 }
 
+// Maps the BipsClientListRowInfo to the Views in the ListView rows
 class BipsClientAdapter extends ArrayAdapter<BipsClientListRowInfo>
 {
+    // Priority number to string map
+    private static final SparseArray<String> bipsMapPriority;
+    static
+    {
+        bipsMapPriority = new SparseArray<String>();
+        bipsMapPriority.append(0, BipsPriority.Highest.toString());
+        bipsMapPriority.append(1, BipsPriority.High.toString());
+        bipsMapPriority.append(2, BipsPriority.Medium.toString());
+        bipsMapPriority.append(3, BipsPriority.Low.toString());
+        bipsMapPriority.append(4, BipsPriority.Lowest.toString());
+    }
+    
     Context context;
     int layoutResourceId;
     List<BipsClientListRowInfo> data = null;
@@ -83,7 +99,7 @@ class BipsClientAdapter extends ArrayAdapter<BipsClientListRowInfo>
         BipsClientListRowInfo clientInfo = data.get(position);
         holder.appLabel.setText(clientInfo.appLabel);
         holder.appPriority.setText("Projection priority: " + 
-                (BipsPriority.High));
+                bipsMapPriority.get(clientInfo.appPriority));
         holder.imgIcon.setImageDrawable(clientInfo.appIcon);
         
         return row;
@@ -99,15 +115,11 @@ class BipsClientAdapter extends ArrayAdapter<BipsClientListRowInfo>
 }
 
 public class BipsMainActivity extends ListActivity {
+    
     // Debugging
     private static final String TAG = "BipsMainActivity";
     private static final boolean D = true;
 
-    // For user preferences of app priority
-    private static final String BIPS_PREFS = "BipsPreferences";
-    // Intent request codes
-    private static final int REQUEST_ENABLE_BT = 1;
-    
     // used to check and enable bluetooth
     private BluetoothAdapter mBluetoothAdapter;
     
@@ -115,33 +127,137 @@ public class BipsMainActivity extends ListActivity {
     private Button mChooseDeviceButton;
     private Button mBluetoothButton;
 
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if(D) Log.e(TAG, "+++ ON CREATE +++");
-        setContentView(R.layout.activity_bips_main);
+        if(D) Log.v(TAG, "+++ ON CREATE +++");
         
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         
-        SharedPreferences settings = getSharedPreferences(BIPS_PREFS, 0);
-//        
-//        ArrayList<String> stuff = new ArrayList<String>();
-//        stuff.addAll(settings.getAll().keySet());
-//        
-//        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, 
-//                R.layout.bound_app_info, stuff);
+
+        // Initialize the service button with a listener that for click events
+        mChooseDeviceButton = new Button(this);
+        mBluetoothButton = new Button(this);
+        mChooseDeviceButton.setEnabled(false);
+        if (mBluetoothAdapter == null)
+        {
+            mBluetoothButton.setEnabled(false);
+            
+        }
+        
+        mChooseDeviceButton.setText(R.string.choose_device_button_text);
+        mBluetoothButton.setText(R.string.enable_bt_button_text);
+        
+        ListView lv = getListView();
+        lv.addHeaderView(mBluetoothButton);
+        lv.addHeaderView(mChooseDeviceButton);
+        
+    }
+
+    @Override
+    public void onStart()
+    {
+        super.onStart();
+        if (D) Log.v(TAG, "++ ON START ++");
+
+        mChooseDeviceButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                // If the BT adapter is enabled, the user may choose the BT
+                // adapter of the BIPS unit
+                if (mBluetoothAdapter.isEnabled()) {
+                    Intent enableIntent = new Intent(getApplicationContext(), DeviceListActivity.class);
+                    startActivity(enableIntent);
+                }
+                
+                
+            }
+        });
+        
+        mBluetoothButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                
+                if (mBluetoothAdapter != null)
+                {
+                    if (!mBluetoothAdapter.isEnabled())
+                    {
+                        Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                        startActivity(enableIntent);
+                        updateBluetoothButtonText();
+                    }
+                    else
+                    {
+                        mBluetoothAdapter.disable();
+                        // Change text here because the adapter does not disable fast enough
+                        mBluetoothButton.setText(R.string.enable_bt_button_text);
+                        mChooseDeviceButton.setEnabled(false);
+                    }
+                    
+                }
+            }
+        });
+
+    }
+    
+    // If Bluetooth is enabled, the button is able to disable it, 
+    // otherwise it is able to request enabling BT. This is strictly
+    // for enabling and changing the text of the button.
+    void updateBluetoothButtonText()
+    {
+        if (mBluetoothAdapter != null)
+        {
+            if (mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothButton.setText(R.string.disable_bt_button_text);
+            }
+            else
+            {
+                mBluetoothButton.setText(R.string.enable_bt_button_text);
+            }
+        }
+    }
+    
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        if (D) Log.v(TAG, "+ ON RESUME +");
+        
+        // Update button functionality
+        
+        // Bluetooth button set text appropriately
+        updateBluetoothButtonText();
+        
+        // Don't let the user select a device if Bluetooth is off
+        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled())
+        {
+            mChooseDeviceButton.setEnabled(true);
+        }
+        else
+        {
+            mChooseDeviceButton.setEnabled(false);
+        }
+        
+        // Update the list (will update since the activity resumes after 
+        // priority selection
+
+        // Get the preferences for application priority and load it
+        // into the UI as a listview
+        SharedPreferences settings = getSharedPreferences(BipsService.BIPS_PREFS, 0);
 
         ArrayList<BipsClientListRowInfo> bipsClients = new ArrayList<BipsClientListRowInfo>();
         
-        
+        // used to retrieve app name and icon from the package name
         PackageManager pk = getPackageManager();
         
         for (String s : settings.getAll().keySet())
         {
             try {
-                bipsClients.add(new BipsClientListRowInfo(pk.getApplicationIcon(s), 
-                        (String) pk.getApplicationLabel(pk.getApplicationInfo(s, 0)), settings.getInt(s, 4)));
+                bipsClients.add(new BipsClientListRowInfo(pk.getApplicationIcon(s),
+                        (String) pk.getApplicationLabel(pk.getApplicationInfo(s, 0)), 
+                        s, 
+                        settings.getInt(s, 4)));
             } catch (NameNotFoundException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -151,72 +267,28 @@ public class BipsMainActivity extends ListActivity {
         BipsClientAdapter bipsAdapter = new BipsClientAdapter(this, 
                 R.layout.bound_app_info, bipsClients);
 
-        // selecting single ListView item
         ListView lv = getListView();
+        lv.setClickable(true);
         
-        // Initialize the service button with a listener that for click events
-        mChooseDeviceButton = new Button(this);
-        mBluetoothButton = new Button(this);
-        
-        mChooseDeviceButton.setText(R.string.choose_device_button_text);
-        mBluetoothButton.setText(R.string.enable_bt_button_text);
-
-        lv.addHeaderView(mBluetoothButton);
-        lv.addHeaderView(mChooseDeviceButton);
-        
-        lv.setAdapter(bipsAdapter);
         lv.setOnItemClickListener(new OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                     int position, long id) {
                 // getting values from selected ListItem
-                Log.i(TAG,"clicked");
+                Intent intent = new Intent(getApplicationContext(), PriorityListActivity.class);
+                
+                BipsClientListRowInfo item = (BipsClientListRowInfo) parent.getItemAtPosition(position);
+                intent.putExtra("packageName", item.appPackage);
+                
+                startActivity(intent);
 
             }
         });
-    }
-
-    @Override
-    public void onStart()
-    {
-        super.onStart();
-        if (D) Log.e(TAG, "++ ON START ++");
         
-        mChooseDeviceButton.setOnClickListener(new OnClickListener() {
-            public void onClick(View v) {
-                // If BT is not on, request that it be enabled.
-                // setupChat() will then be called during onActivityResult
-                if (!mBluetoothAdapter.isEnabled()) {
-                    Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-                // Otherwise, setup the chat session
-                } else {
-
-                    // Bind Bips
-                    Intent enableIntent = new Intent(getApplicationContext(), DeviceListActivity.class);
-                    startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-                }
-                
-                
-            }
-        });
-
+        lv.setAdapter(bipsAdapter);
     }
     
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(D) Log.d(TAG, "onActivityResult " + resultCode);
-        switch (requestCode) {
-        case REQUEST_ENABLE_BT:
-            // When the request to enable Bluetooth returns
-            if (resultCode == Activity.RESULT_OK) {
-                // Bluetooth is now enabled, so bind to the BIPS Android service
-                //doBindService();
-            } else {
-                // User did not enable Bluetooth or an error occurred
-                Log.d(TAG, "BT not enabled");
-                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+    
+    
 }

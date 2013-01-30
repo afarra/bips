@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -43,7 +44,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 /**
  * This Activity appears as a dialog. It lists any paired devices and
@@ -133,15 +133,12 @@ public class DeviceListActivity extends Activity {
             mPairedDevicesArrayAdapter.add(noDevices);
         }
         
-        doBindService();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         
-        // The application is done after choosing, unbind the service
-        doUnbindService();
         
         // Make sure we're not doing discovery anymore
         if (mBtAdapter != null) {
@@ -192,12 +189,19 @@ public class DeviceListActivity extends Activity {
             setResult(Activity.RESULT_OK, intent);
           
             // Give the BIPS the BT device to connect to 
-            try {
-				mIRemoteService.deviceChosenConnect(address);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//            try {
+//				mIRemoteService.deviceChosenConnect(address);
+//			} catch (RemoteException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+            
+            // Give BIPS the BT device by updating the preferences
+            SharedPreferences settings = getSharedPreferences(BipsService.BT_PREFS, 0);
+            SharedPreferences.Editor editor = settings.edit();
+            
+            editor.putString(BipsService.BT_DEVICE, address);
+            editor.apply();
             
             finish();
         }
@@ -236,7 +240,7 @@ public class DeviceListActivity extends Activity {
 	/**
 	 * Handler of incoming messages from service.
 	 */
-	class IncomingHandler extends Handler {
+	static class IncomingHandler extends Handler {
 	    /*@Override
 	    public void handleMessage(Message msg) {
 	        switch (msg.what) {

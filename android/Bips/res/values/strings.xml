@@ -39,7 +39,7 @@
     <!-- BipsService -->
     <string name="remote_service_label">Bike Projection Service</string>
     <string name="remote_service_started">Please connect to a Bluetooth device</string>
-    <string name="selected_bt_device">Connected to\u0020</string>
+    <string name="selected_bt_device">Connecting to\u0020</string>
     <string name="remote_service_stopped">BIPS: Remote Service Stopped</string>
     <string name="not_connected">Not connected.</string>
     <string name="menu_settings">Settings</string>
@@ -48,5 +48,11 @@
     <!-- BipsMainActivity -->
     <string name="choose_device_button_text">Select BIPS Device</string>
     <string name="enable_bt_button_text">Enable Bluetooth</string>
-
+    <string name="disable_bt_button_text">Disable Bluetooth</string>
+    <string name="icon_hint">Application Icon</string>
+    
+    <!-- PriorityListActivity -->
+    <string name="priority_label">Choose app priority</string>
+    
+    
 </resources>

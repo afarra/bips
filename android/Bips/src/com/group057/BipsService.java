@@ -3,7 +3,6 @@ package com.group057;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-import android.R.integer;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -12,6 +11,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -39,8 +39,10 @@ public class BipsService extends Service {
 	public static final String API_IMAGE_PIXELS = "image_pixels";
 
 	// Preferences name
-	private static final String BIPS_PREFS = "BipsPreferences";
-	
+    static final String BIPS_PREFS = "BipsPreferences";
+    static final String BT_PREFS = "BluetoothPreferences";
+	static final String BT_DEVICE = "BTDeviceAddress";
+    
 	enum BipsStatus {
 		IDLE, BUSY
 	}
@@ -89,20 +91,15 @@ public class BipsService extends Service {
 	public static final int API_REQ_CANCEL_ALL_IMAGES = 12;			// Cancel all the images in the queues from this application
 	public static final int API_REQ_CANCEL_BY_PRIORITY = 13;		// Cancel all images in a certain priority queue
 	
-	// Debug message to send an image over BT
-	public static final int DEBUG_SEND_IMAGE = 20;
 
-    private static final int BIPS_IMAGE_WIDTH = 20;
-    private static final int BIPS_IMAGE_HEIGHT = 8;
+    static final int BIPS_IMAGE_WIDTH = 20;
+    static final int BIPS_IMAGE_HEIGHT = 8;
 
 	// Local Bluetooth adapter
 	private BluetoothAdapter mBluetoothAdapter = null;
 	// Member object for the chat services
 	private BluetoothChatService mChatService = null;
-
-	// For keeping track of application priorities
-	private SharedPreferences mSettings = null;
-
+    
 	/** For showing and hiding our notification. */
 	NotificationManager mNM;
 	/** Keeps track of all current registered clients. */
@@ -170,18 +167,54 @@ public class BipsService extends Service {
 	};
 
 	/**
-	 * Target we publish for clients to send messages to IncomingHandler.
+	 * Target we publish for BTThread to send messages to IncomingHandler.
 	 */
-	final Messenger mMessenger = new Messenger(mHandler);
+	private final Handler mBtHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MESSAGE_DEVICE_NAME:
+                // save the connected device's name
+                String connectedDeviceName = msg.getData().getString(DEVICE_NAME);
+                Toast.makeText(getApplicationContext(), "Connected to "
+                               + connectedDeviceName, Toast.LENGTH_SHORT).show();
+                showNotification("Connected to " + connectedDeviceName);
+                break;
+            case MESSAGE_TOAST:
+                Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
+                               Toast.LENGTH_SHORT).show();
+                break;
+            }
+        }
+    };
+	final Messenger mMessenger = new Messenger(mBtHandler);
 
+	/**
+	 * This listener will watch for DeviceListActivity to update the 
+	 * bluetooth device and connect to the chosen device
+	 */
+	OnSharedPreferenceChangeListener mListener = new OnSharedPreferenceChangeListener() {
+        
+        @Override
+        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+                String key) {
+            if (key == BT_DEVICE)
+            {
+                SharedPreferences settings = getSharedPreferences(BT_PREFS, 0);
+                String address = settings.getString(key, null);
+                if (D) Log.v(TAG, "Device pref updated: " + address);
+                bluetoothConnect(address);
+            }
+        }
+    };
+	
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		
-		if (D){
-			Log.e(TAG, "+++ ON CREATE +++");
+		if (D) Log.e(TAG, "+++ ON CREATE +++");
 			//android.os.Debug.waitForDebugger();
-		}
+		
 		
 		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 		// Display a notification about us starting.
@@ -209,25 +242,14 @@ public class BipsService extends Service {
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
 
+		// Make the service listen for selected BT device to connect to
+		SharedPreferences settings = getSharedPreferences(BT_PREFS, 0);
 		
-//		if (mChatService != null) {
-//            // Only if the state is STATE_NONE, do we know that we haven't started already
-//            if (mChatService.getState() == BluetoothChatService.STATE_NONE) {
-//
-//        		if (D) {
-//        			Log.e(TAG, "Service starting BT threads");
-//        		}
-//        		
-//        		// Start the Bluetooth chat services
-//        		mChatService.start();
-//            }
-//        }
-		
-		
-		//setupChat();
-		
-		
-		
+		if (settings.contains(BT_DEVICE))
+		{
+		    bluetoothConnect(settings.getString(BT_DEVICE, null));
+		}
+		settings.registerOnSharedPreferenceChangeListener(mListener);
 	}
 
 	@Override
@@ -270,13 +292,17 @@ public class BipsService extends Service {
             // Does nothing
         }
         
-        public void imageRequestQueue(byte[] image, int time, byte priority, int pid) {
-        	if (D)
-				Log.i(TAG, "Queuing image: time " + time + " PID: " + pid);
+        public void imageRequestQueue(byte[] image, int time, byte priority, String packageName) {
+        	if (D) Log.i(TAG, "Queuing image: time " + time + " PID: " + packageName);
 			// Add an image into the queues for projection
-			BipsImage bImage = new BipsImage(image, priority, time, pid);
+			BipsImage bImage = new BipsImage(image, priority, time, packageName);
 			
-			mImageQueue[bImage.priority].add(bImage);
+			// get the priority of the application requesting image projection
+			SharedPreferences settings = getSharedPreferences(BIPS_PREFS, 0);
+			int sendingPriority = settings.getInt(packageName, API_MEDIUM_PRIORITY);
+			if (D) Log.i(TAG, "  image priority " + sendingPriority);
+			
+			mImageQueue[sendingPriority].add(bImage);
 			
 			if (mCurrentImage == null)
 			{
@@ -284,13 +310,13 @@ public class BipsService extends Service {
 			}
         }
         
-        public void imageRequestCancelCurrent(int pid) {
+        public void imageRequestCancelCurrent(String packageName) {
 
 			if (D)
-				Log.i(TAG, "Cancel current image: PID " + pid);
+				Log.i(TAG, "Cancel current image: PID " + packageName);
 			// Cancel the current projected image if it is from the requesting application
 			// This is done by setting the service monitoring status to IDLE
-			if (mCurrentImage != null && pid == mCurrentImage.pid)
+			if (mCurrentImage != null && packageName == mCurrentImage.packageName)
 			{
 				// sending a preempting blank image
 				BipsImage bImage = new BipsImage();
@@ -299,13 +325,13 @@ public class BipsService extends Service {
 			}
         }
         
-        public void imageRequestCancelAll(int pid) {
+        public void imageRequestCancelAll(String packageName) {
 
 			if (D)
-				Log.i(TAG, "CancellAll: Canceling current image: PID " + pid);
+				Log.i(TAG, "CancellAll: Canceling current image: PID " + packageName);
 			// Cancel the current projected image if it is from the requesting application
 			// This is done by setting the service monitoring status to IDLE
-			if (mCurrentImage != null && pid == mCurrentImage.pid)
+			if (mCurrentImage != null && packageName == mCurrentImage.packageName)
 			{
 				// sending a preempting blank image
 				BipsImage bImage = new BipsImage();
@@ -314,14 +340,14 @@ public class BipsService extends Service {
 			}
         	
         	if (D)
-				Log.i(TAG, "Cancelling all queued images: PID " + pid);
+				Log.i(TAG, "Cancelling all queued images: PID " + packageName);
 			// Cancel all the images in the queues from this application
 			// Search through all priority queues for images with matching messenger and remove
 			for( int i = 0; i < mImageQueue.length; ++i)
 			{
 				for (int j = 0; j < mImageQueue[i].size(); ++j)
 				{
-					if (mImageQueue[i].get(j).pid == pid)
+					if (mImageQueue[i].get(j).packageName == packageName)
 					{
 						if (D)
 							Log.i(TAG, "Cancelled");
@@ -336,11 +362,7 @@ public class BipsService extends Service {
         public void deviceChosenConnect(String address) {
         	// When DeviceListActivity returns with a device to connect
 			// Get the BluetoothDevice object
-			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-			showNotification(getText(com.group057.R.string.selected_bt_device) + device.getName());
-			
-			// Attempt to connect to the device
-			mChatService.connect(device, true);
+            bluetoothConnect(address);
         }
 
         public void registerCallback(IRemoteServiceCallback client) {
@@ -374,8 +396,7 @@ public class BipsService extends Service {
                     editor.putInt(clientPackage, API_MEDIUM_PRIORITY);
     
                     editor.commit();
-                    if (D)
-                        Log.v(TAG, "New client to priority prefs: " + clientPackage);
+                    if (D) Log.v(TAG, "New client to priority prefs: " + clientPackage);
                 }
             }
             
@@ -402,23 +423,15 @@ public class BipsService extends Service {
 			}
         }
         @Override
-        public void bitmapRequestQueue(Bitmap image, int time, byte priority, int pid)
+        public void bitmapRequestQueue(Bitmap image, int time, byte priority, String packageName)
         {
-            if (D)
-                Log.i(TAG, "Queuing bitmap: time " + time + " PID: " + pid);
+            if (D) Log.i(TAG, "Queuing bitmap: time " + time + " PID: " + packageName);
             // Add an image into the queues for projection
             if (image.getHeight() == BIPS_IMAGE_HEIGHT && image.getWidth() == BIPS_IMAGE_WIDTH)
             {
                 
                 byte[] imageArray = bitmapToByteArray(image);
-                BipsImage bImage = new BipsImage(imageArray, priority, time, pid);
-                
-                mImageQueue[bImage.priority].add(bImage);
-                
-                if (mCurrentImage == null)
-                {
-                    mHandler.post(rSetIdle);
-                }
+                imageRequestQueue(imageArray, time, priority, packageName);
             }
         }
     };
@@ -476,51 +489,21 @@ public class BipsService extends Service {
 		}
 	}
 
-	private void connectDevice(Intent data, boolean secure) {
-		// Get the device MAC address
-		String address = data.getExtras().getString(
-				com.group057.DeviceListActivity.EXTRA_DEVICE_ADDRESS);
-		// Get the BluetoothDevice object
-		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-		// Attempt to connect to the device
-		mChatService.connect(device, secure);
-	}
-
-	private void setupChat() {
-		Log.d(TAG, "setupChat()");
-		/*
-		// initialize the priority queues
-		for (int i = 0; i < mImageQueue.length; i++) {
-			mImageQueue[i] = new ArrayList<BipsImage>();
-		}
-
-		// Initialize the BluetoothChatService to perform bluetooth connections
-		mChatService = new BluetoothChatService(this, mMessenger);
-
-		Intent deviceIntent = new Intent(this, DeviceListActivity.class);
-		deviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(deviceIntent);*/
-		
-		
-		mHandler.post(rSetIdle);
-		// A separate thread for queue monitoring is created and then started.
-		//messageMonitoring = performOnBackgroundThread(rSetIdle);
-	}
-
-	public static Thread performOnBackgroundThread(final Runnable runnable) {
-	    final Thread t = new Thread() {
-	    	public void run(){
-	            try {
-	                runnable.run();
-	            } finally {
-
-	            }
-	        }
-	    };
-	    t.setDaemon(true);
-	    t.start();
-	    return t;
-	}
+//
+//	public static Thread performOnBackgroundThread(final Runnable runnable) {
+//	    final Thread t = new Thread() {
+//	    	public void run(){
+//	            try {
+//	                runnable.run();
+//	            } finally {
+//
+//	            }
+//	        }
+//	    };
+//	    t.setDaemon(true);
+//	    t.start();
+//	    return t;
+//	}
 	
     public byte[] bitmapToByteArray(Bitmap b) {
         byte[] imageArray = new byte[BIPS_IMAGE_WIDTH];
@@ -548,6 +531,25 @@ public class BipsService extends Service {
 
         return imageArray;
     }
+
+    public void bluetoothConnect(String address) {
+        // When DeviceListActivity returns with a device to connect
+        // Get the BluetoothDevice object
+        if (address != null)
+        {
+            BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+            showNotification(getText(com.group057.R.string.selected_bt_device) + device.getName());
+            
+            // Attempt to connect to the device
+            mChatService.connect(device, true);
+            
+        }
+        else
+        {
+            if (D) Log.e(TAG, "Tried to BT connect to null address");
+        }
+    }
+    
 
 
 	/** 
@@ -668,7 +670,7 @@ class BipsImage {
 	int time; // the length of time to project the image in seconds
 	
 	Messenger requester; // may be used to identify the requesting application
-	int pid; 
+	String packageName; 
 	
 	BipsImage(){
 		priority = 0;
@@ -682,10 +684,10 @@ class BipsImage {
 		requester = iId;
 	}
 
-	BipsImage(byte[] imageByteArray, byte iPriority, int iTime, int iId) {
+	BipsImage(byte[] imageByteArray, byte iPriority, int iTime, String packageName) {
 		pixelArray = imageByteArray;
 		priority = iPriority;
 		time = iTime;
-		pid = iId;
+		this.packageName = packageName;
 	}
 }

@@ -1,7 +1,6 @@
 package com.othercompany.demoapplications;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -37,10 +36,6 @@ public class TestActivity extends Activity {
 		(byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, 
 		(byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, 
 		(byte) 0x30, (byte) 0x10, (byte) 0x10, (byte) 0x10 };
-	private static final byte[] up = { 
-		0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x18,
-		(byte) 0x38, (byte) 0x78, (byte) 0x38, (byte) 
-		0x18, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0 };
 	private static final byte[] down = { 
 		(byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xc0,
 		(byte) 0xc0, (byte) 0xc0, (byte) 0xe0, (byte) 0xe0,
@@ -58,27 +53,6 @@ public class TestActivity extends Activity {
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
 		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
-	private static final byte[] up_eight = { 
-		0, 0, 0, 0, 0, 0, 0, (byte) 0x20, (byte) 0x40, 
-		(byte) 0xff, (byte) 0x40, (byte) 0x20, 0, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] down_eight = { 
-		0, 0, 0, 0, 0, 0, 0, (byte) 0x04, (byte) 0x02, (byte) 0xff, 
-		(byte) 0x02, (byte) 0x04, 0, 0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] right_eight = { 
-		0, 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x08, (byte) 0x49, 
-		(byte) 0x2a, (byte) 0x1c, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left_eight = { 
-		0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x1c, (byte) 0x2a, (byte) 0x49, 
-		(byte) 0x08, (byte) 0x08, (byte) 0x08, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-
-    // Intent request codes
-    private static final int REQUEST_ENABLE_BT = 1;
-    
-
-	// Local Bluetooth adapter
-	private BluetoothAdapter mBluetoothAdapter = null;
 	
 	
 	/** Messenger for communicating with service. */
@@ -105,9 +79,6 @@ public class TestActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		if (D)
 			Log.e(TAG, "+++ ON CREATE +++");
-
-        // Get the local Bluetooth adapter
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         
 		// Set up the window layout
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
@@ -138,7 +109,7 @@ public class TestActivity extends Activity {
 
 	                try {
 	        			mIRemoteService.imageRequestQueue(mImageChosen, Integer.parseInt(mDurationText
-								.getText().toString()), mPriorityChosen, Process.myPid());
+								.getText().toString()), mPriorityChosen, getPackageName());
 	        		} catch (RemoteException e) {
 	        			// TODO Auto-generated catch block
 	        			e.printStackTrace();
@@ -154,7 +125,7 @@ public class TestActivity extends Activity {
 		mCancelCurrentButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				try {
-					mIRemoteService.imageRequestCancelCurrent(Process.myPid());
+					mIRemoteService.imageRequestCancelCurrent(getPackageName());
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -170,7 +141,7 @@ public class TestActivity extends Activity {
 
 				
 				try {
-					mIRemoteService.imageRequestCancelAll(Process.myPid());
+					mIRemoteService.imageRequestCancelAll(getPackageName());
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -337,22 +308,6 @@ public class TestActivity extends Activity {
 		return 2;
 	}
 	
-//
-//	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        if(D) Log.d(TAG, "onActivityResult " + resultCode);
-//        switch (requestCode) {
-//        case REQUEST_ENABLE_BT:
-//            // When the request to enable Bluetooth returns
-//            if (resultCode == Activity.RESULT_OK) {
-//                // Bluetooth is now enabled, so bind to the BIPS Android service
-//                doBindService();
-//            } else {
-//                // User did not enable Bluetooth or an error occurred
-//                Log.d(TAG, "BT not enabled");
-//                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
-//            }
-//        }
-//    }
 	
 
     // ----------------------------------------------------------------------

@@ -267,11 +267,11 @@ public class NavigatorActivity extends Activity{
 			    			switch(upComingStep.getCurrentArrow()) {
 			    				case LEFT:
 			    					mIRemoteService.imageRequestQueue(left, 5000
-			    							, (byte) 0, Process.myPid());
+			    							, (byte) 0, getPackageName());
 			    				break;
 			    				case RIGHT:
 			    					mIRemoteService.imageRequestQueue(right, 5000
-			    							, (byte) 0, Process.myPid());
+			    							, (byte) 0, getPackageName());
 			    				break;
 			    			}
 			    		} catch (RemoteException e) {
@@ -295,7 +295,7 @@ public class NavigatorActivity extends Activity{
 	    	    	
 	    			if (distance < 8 || checkPointReached) {
 		    			try {
-		    				mIRemoteService.imageRequestCancelAll(Process.myPid());
+		    				mIRemoteService.imageRequestCancelAll(getPackageName());
 		    				s = steps.pop();
 		    				if (steps.size() != 0) {
 		    					upComingStep = steps.getFirst();
