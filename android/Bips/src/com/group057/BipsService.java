@@ -223,6 +223,11 @@ public class BipsService extends Service {
 		// Get local Bluetooth adapter
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
+
+        // Make the service listen for selected BT device to connect to
+        SharedPreferences settings = getSharedPreferences(BT_PREFS, 0);
+        settings.registerOnSharedPreferenceChangeListener(mListener);
+        
 		// If the adapter is null, then Bluetooth is not supported
 		if (mBluetoothAdapter == null) {
 			Toast.makeText(this, "Bluetooth is not available",
@@ -241,15 +246,15 @@ public class BipsService extends Service {
 		
 		// Initialize the BluetoothChatService to perform bluetooth connections
 		mChatService = new BluetoothChatService(this, mMessenger);
-
-		// Make the service listen for selected BT device to connect to
-		SharedPreferences settings = getSharedPreferences(BT_PREFS, 0);
-		
-		if (settings.contains(BT_DEVICE))
-		{
-		    bluetoothConnect(settings.getString(BT_DEVICE, null));
+	          		
+		// auto-connect to the bluesmirf
+		if (mBluetoothAdapter != null) {
+            if (mBluetoothAdapter.isEnabled() && settings.contains(BT_DEVICE))
+            {
+                bluetoothConnect(settings.getString(BT_DEVICE, null));
+            }
 		}
-		settings.registerOnSharedPreferenceChangeListener(mListener);
+
 	}
 
 	@Override
@@ -316,7 +321,7 @@ public class BipsService extends Service {
 				Log.i(TAG, "Cancel current image: PID " + packageName);
 			// Cancel the current projected image if it is from the requesting application
 			// This is done by setting the service monitoring status to IDLE
-			if (mCurrentImage != null && packageName == mCurrentImage.packageName)
+			if (mCurrentImage != null && packageName.equals(mCurrentImage.packageName))
 			{
 				// sending a preempting blank image
 				BipsImage bImage = new BipsImage();
@@ -331,7 +336,7 @@ public class BipsService extends Service {
 				Log.i(TAG, "CancellAll: Canceling current image: PID " + packageName);
 			// Cancel the current projected image if it is from the requesting application
 			// This is done by setting the service monitoring status to IDLE
-			if (mCurrentImage != null && packageName == mCurrentImage.packageName)
+			if (mCurrentImage != null && packageName.equals(mCurrentImage.packageName))
 			{
 				// sending a preempting blank image
 				BipsImage bImage = new BipsImage();
@@ -347,7 +352,7 @@ public class BipsService extends Service {
 			{
 				for (int j = 0; j < mImageQueue[i].size(); ++j)
 				{
-					if (mImageQueue[i].get(j).packageName == packageName)
+					if (mImageQueue[i].get(j).packageName.equals(packageName))
 					{
 						if (D)
 							Log.i(TAG, "Cancelled");
@@ -539,7 +544,7 @@ public class BipsService extends Service {
         {
             BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
             showNotification(getText(com.group057.R.string.selected_bt_device) + device.getName());
-            
+
             // Attempt to connect to the device
             mChatService.connect(device, true);
             
