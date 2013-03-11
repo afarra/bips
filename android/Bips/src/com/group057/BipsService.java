@@ -9,6 +9,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -18,6 +19,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
@@ -112,15 +114,19 @@ public class BipsService extends Service {
 	// queue. Not sure how to create an ArrayList of BipsImages without warning.
 	ArrayList<BipsImage>[] mImageQueue = (ArrayList<BipsImage>[]) new ArrayList[API_LOWEST_PRIORITY + 1];
 	
-	
+	// TODO: Get rid of the above warning
 	ArrayList<ArrayList<Object>> mImageQueue2;
+	
+	/** Power manager to allow service to operate while the phone is locked **/
+	PowerManager pm;
+    PowerManager.WakeLock wl;
+
+	 
 	// The image currently being projected
 	protected BipsImage mCurrentImage = null;
 	
 	/** Important types and such for the scheduler **/
 	boolean mIsDestroyed = false;
-	
-	Thread messageMonitoring;
 
 
 	/**
@@ -255,20 +261,27 @@ public class BipsService extends Service {
             }
 		}
 
+		
+		// acquire wakelock to prevent lost messages caused by sleeping phone
+		pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+	    wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+		wl.acquire();
 	}
 
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		Log.e(TAG, "--- ON DESTROY ---");
+		Log.v(TAG, "--- ON DESTROY ---");
 		// Stop the Bluetooth chat services
 		if (mChatService != null)
 			mChatService.stop();
-		if (D)
 
 		// Cancel the persistent notification.
 		mNM.cancel(R.string.remote_service_started);
 
+		// Stop the wake lock
+		wl.release();
+		
 		// flag the service as destroyed for threads to detect and stop themselves
 		mIsDestroyed = true;
 		
