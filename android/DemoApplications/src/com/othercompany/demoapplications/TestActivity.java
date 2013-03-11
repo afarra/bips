@@ -1,6 +1,7 @@
 package com.othercompany.demoapplications;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -60,6 +61,7 @@ public class TestActivity extends Activity {
     IRemoteService mIRemoteService = null;
 	/** Flag indicating whether we have called bind on the service. */
 	boolean mIsBound;
+	BluetoothAdapter mBtAdapter = null;
 
 	/** Some text view we are using to show state information. */
 	static TextView mCallbackText;
@@ -67,13 +69,13 @@ public class TestActivity extends Activity {
 	private Button mStartServiceButton;
 	private Button mSendImageButton;
 	private Button mCancelCurrentButton;
-	private Button mCancelAllButton;
+    private Button mCancelAllButton;
+    private Button mPeriodicButton;
 	private RadioGroup mImageRadio;
-	private RadioGroup mPriorityRadio;
 	byte[] mImageChosen;
-	byte mPriorityChosen = (byte)0xffff;
 	private EditText mDurationText;
-
+	private boolean mPeriodicFlag = false;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -92,7 +94,6 @@ public class TestActivity extends Activity {
 			Log.e(TAG, "++ ON START ++");
         
 		mCallbackText = (TextView) findViewById(R.id.textView_callback);
-		mPriorityRadio = (RadioGroup) findViewById(R.id.radioGroup2);
 		mImageRadio = (RadioGroup) findViewById(R.id.radioGroup1);
 		mDurationText = (EditText) findViewById(R.id.editText1);
 
@@ -102,14 +103,12 @@ public class TestActivity extends Activity {
 		mSendImageButton.setEnabled(false);
 		mSendImageButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				mPriorityChosen = getPriorityFromRadio(mPriorityRadio);
 				mImageChosen = getImageFromRadio(mImageRadio);
-				if (mImageChosen != null && mPriorityChosen >= 0
-						&& mDurationText.getText() != null) {
+				if (mImageChosen != null && mDurationText.getText() != null) {
 
 	                try {
 	        			mIRemoteService.imageRequestQueue(mImageChosen, Integer.parseInt(mDurationText
-								.getText().toString()), mPriorityChosen, getPackageName());
+								.getText().toString()), (byte)0, getPackageName());
 	        		} catch (RemoteException e) {
 	        			// TODO Auto-generated catch block
 	        			e.printStackTrace();
@@ -132,23 +131,50 @@ public class TestActivity extends Activity {
 				}
 			}
 		});
-		// Initialize the cancel all images button with a listener that for click
-		// events
-		mCancelAllButton = (Button) findViewById(R.id.button_cancel_all);
-		mCancelAllButton.setEnabled(false);
-		mCancelAllButton.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
+        
+        // Initialize the cancel all images button with a listener that for click
+        // events
+        mCancelAllButton = (Button) findViewById(R.id.button_cancel_all);
+        mCancelAllButton.setEnabled(false);
+        mCancelAllButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
 
-				
-				try {
-					mIRemoteService.imageRequestCancelAll(getPackageName());
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-			}
-		});
+                
+                try {
+                    mIRemoteService.imageRequestCancelAll(getPackageName());
+                } catch (RemoteException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                
+            }
+        });
+        
+        // Initialize the periodic requests button. Pressing the button toggles periodic
+        // requests which last for 
+        mPeriodicButton = (Button) findViewById(R.id.button_periodic_request);
+        mPeriodicButton.setEnabled(false);
+        mPeriodicButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                
+                mPeriodicFlag = !mPeriodicFlag;
+                if (mPeriodicFlag)
+                {
+                    if (mPeriodicRequestThread == null || !mPeriodicRequestThread.isAlive())
+                    {
+                        mPeriodicRequestThread = new Thread(mPeriodicRequestProc);
+                        mPeriodicRequestThread.start();
+                        
+                        mPeriodicButton.setText("Stop periodic requests");
+                    }
+                }
+                else
+                {
+                    mPeriodicButton.setText("Start periodic requests");
+                }
+                
+            }
+        });
 
 		// Initialize the service button with a listener that for click events
 		mStartServiceButton = (Button) findViewById(R.id.button_service);
@@ -169,10 +195,20 @@ public class TestActivity extends Activity {
 		        
 				mSendImageButton.setEnabled(true);
 				mCancelAllButton.setEnabled(true);
-				mCancelCurrentButton.setEnabled(true);
+                mCancelCurrentButton.setEnabled(true);
+                mPeriodicButton.setEnabled(true);
 			}
 		});
-
+		
+		// allow sending of images if bound
+		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+		if (mBtAdapter != null && !mBtAdapter.isDiscovering())
+		{
+            mSendImageButton.setEnabled(true);
+            mCancelAllButton.setEnabled(true);
+            mCancelCurrentButton.setEnabled(true);
+            mPeriodicButton.setEnabled(true);
+		}
 	}
 
 	@Override
@@ -180,6 +216,14 @@ public class TestActivity extends Activity {
 		super.onResume();
 		if (D)
 			Log.e(TAG, "+ ON RESUME +");
+		if (mPeriodicFlag)
+		{
+		    mPeriodicButton.setText("Stop periodic requests");
+		}
+		else
+		{
+		    mPeriodicButton.setText("Start periodic requests");
+		}
 	}
 
 	@Override
@@ -187,7 +231,9 @@ public class TestActivity extends Activity {
 		super.onDestroy();
 		if (D)
 			Log.e(TAG, "+ ON DESTROY +");
+		mPeriodicFlag = false;
 		doUnbindService();
+		
 	}
 
 	/**
@@ -212,9 +258,7 @@ public class TestActivity extends Activity {
 	final Handler mHandler = new Handler();
 	final Messenger mMessenger = new Messenger(mHandler);
 
-	/**
-	 * Class for interacting with the main interface of the service.
-	 */
+
 
 	/**
 	 * Class for interacting with the main interface of the service.
@@ -343,6 +387,35 @@ public class TestActivity extends Activity {
         {
             return getPackageName();
         }
+    };
+    
+    Thread mPeriodicRequestThread = null;
+    Runnable mPeriodicRequestProc = new Runnable()
+    {
+
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            while(mPeriodicFlag)
+            {
+                try {
+                    mIRemoteService.imageRequestQueue(down, Integer.parseInt(mDurationText
+                            .getText().toString()), (byte)0, getPackageName());
+                } catch (RemoteException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                try {
+                    Thread.sleep(Integer.parseInt(mDurationText
+                            .getText().toString()));
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        
     };
 }
 

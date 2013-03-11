@@ -92,54 +92,6 @@
             </RadioGroup>
         </TableRow>
 
-        <TableRow
-            android:id="@+id/tableRow3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" >
-
-            <TextView
-                android:id="@+id/textView_priority"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/priority_heading_text" />
-
-            <RadioGroup
-                android:id="@+id/radioGroup2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" >
-
-                <RadioButton
-                    android:id="@+id/radio_highest"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="@string/highest_text" />
-
-                <RadioButton
-                    android:id="@+id/radio_high"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/high_text" />
-
-                <RadioButton
-                    android:id="@+id/radio_medium"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/medium_text" />
-
-                <RadioButton
-                    android:id="@+id/radio_low"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/low_text" />
-
-                <RadioButton
-                    android:id="@+id/radio_lowest"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/lowest_text" />
-            </RadioGroup>
-        </TableRow>
 
         <TableRow
             android:id="@+id/tableRow4"
@@ -169,6 +121,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/send_cancel_all_text" />
+            <Button
+                android:id="@+id/button_periodic_request"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Periodic Requests" />
         </TableRow>
     </TableLayout>
 
