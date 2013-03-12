@@ -19,6 +19,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Parcel;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
@@ -302,6 +303,14 @@ public class BipsService extends Service {
 		return mBinder;
 	}
 	private final IRemoteService.Stub mBinder = new IRemoteService.Stub() {
+	    
+	    @Override
+        public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
+            
+                return super.onTransact(code, data, reply, flags);
+            
+        }
+	    
         public int getPid(){
             return Process.myPid();
         }
@@ -344,37 +353,39 @@ public class BipsService extends Service {
         }
         
         public void imageRequestCancelAll(String packageName) {
-
-			if (D)
-				Log.i(TAG, "CancellAll: Canceling current image: PID " + packageName);
-			// Cancel the current projected image if it is from the requesting application
-			// This is done by setting the service monitoring status to IDLE
-			if (mCurrentImage != null && packageName.equals(mCurrentImage.packageName))
-			{
-				// sending a preempting blank image
-				BipsImage bImage = new BipsImage();
-				mImageQueue[bImage.priority].add(0,bImage);
-				mHandler.postAtFrontOfQueue(rSetIdle);
-			}
-        	
-        	if (D)
-				Log.i(TAG, "Cancelling all queued images: PID " + packageName);
-			// Cancel all the images in the queues from this application
-			// Search through all priority queues for images with matching messenger and remove
-			for( int i = 0; i < mImageQueue.length; ++i)
-			{
-				for (int j = 0; j < mImageQueue[i].size(); ++j)
-				{
-					if (mImageQueue[i].get(j).packageName.equals(packageName))
-					{
-						if (D)
-							Log.i(TAG, "Cancelled");
-						mImageQueue[i].remove(j);
-						--j;	// decrement since the next index will be pushed forward to the just removed one
-					}
-				}
-			}
-			
+            if (packageName != null)
+            {
+                if (D)
+                    Log.i(TAG, "CancellAll: Canceling current image: PID " + packageName);
+                // Cancel the current projected image if it is from the requesting application
+                // This is done by setting the service monitoring status to IDLE
+                if (mCurrentImage != null && packageName.equals(mCurrentImage.packageName))
+                {
+                    // sending a preempting blank image
+                    BipsImage bImage = new BipsImage();
+                    mImageQueue[bImage.priority].add(0,bImage);
+                    mHandler.postAtFrontOfQueue(rSetIdle);
+                }
+                
+                if (D)
+                    Log.i(TAG, "Cancelling all queued images: PID " + packageName);
+                // Cancel all the images in the queues from this application
+                // get the priority of the application requesting image projection
+                SharedPreferences settings = getSharedPreferences(BIPS_PREFS, 0);
+                int sendingPriority = settings.getInt(packageName, API_MEDIUM_PRIORITY);
+                
+                for (int j = 0; j < mImageQueue[sendingPriority].size(); ++j)
+                {
+                    if (mImageQueue[sendingPriority].get(j).packageName.equals(packageName))
+                    {
+                        if (D)
+                            Log.i(TAG, "Cancelled");
+                        mImageQueue[sendingPriority].remove(j);
+                        --j;    // decrement since the next index will be pushed forward to the just removed one
+                    }
+                }
+                
+            }
         }
         
         public void deviceChosenConnect(String address) {

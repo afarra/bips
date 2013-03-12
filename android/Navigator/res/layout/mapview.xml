@@ -2,7 +2,8 @@
 <AbsoluteLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
-
+    
+
     <com.google.android.maps.MapView
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/mapview"
@@ -10,11 +11,10 @@
         android:layout_height="400dp"
         android:layout_x="1dp"
         android:layout_y="1dp"
-        android:apiKey="0sRoZd5lZbFJSZetsNgxdwclLC7cFidoa8OqYgw"
+        android:apiKey="AIzaSyBKFuP51IpZN-qBa5Uz8TCuiggQ6t-IZ9c"
         android:clickable="true" >
 
     </com.google.android.maps.MapView>
-
     <Button
         android:id="@+id/setDirection"
         android:layout_width="66dp"
