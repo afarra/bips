@@ -31,29 +31,53 @@ public class TestActivity extends Activity {
 	private static final boolean D = true;
 
 	// Images to send
-	private static final byte[] upWide = { 
-		(byte) 0x10, (byte) 0x10, (byte) 0x10, (byte) 0x30, 
-		(byte) 0x30, (byte) 0x30, (byte) 0x70, (byte) 0x70,
-		(byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, 
-		(byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, 
-		(byte) 0x30, (byte) 0x10, (byte) 0x10, (byte) 0x10 };
-	private static final byte[] down = { 
-		(byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xc0,
-		(byte) 0xc0, (byte) 0xc0, (byte) 0xe0, (byte) 0xe0,
-		(byte) 0xe0, (byte) 0xf0, (byte) 0xf0, (byte) 0xe0,
-		(byte) 0xe0, (byte) 0xe0, (byte) 0xc0, (byte) 0xc0,
-		(byte) 0xc0, (byte) 0x80, (byte) 0x80, (byte) 0x80 };
-	private static final byte[] right = { 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0xf8, (byte) 0xf8, 
-		(byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
-	private static final byte[] left = { 
-		(byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
-		(byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+    private static final byte[] upWide = { 
+        (byte) 0x10, (byte) 0x10, (byte) 0x10, (byte) 0x30, 
+        (byte) 0x30, (byte) 0x30, (byte) 0x70, (byte) 0x70,
+        (byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, 
+        (byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, 
+        (byte) 0x30, (byte) 0x10, (byte) 0x10, (byte) 0x10 };
+    private static final byte[] down = { 
+        (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xc0,
+        (byte) 0xc0, (byte) 0xc0, (byte) 0xe0, (byte) 0xe0,
+        (byte) 0xe0, (byte) 0xf0, (byte) 0xf0, (byte) 0xe0,
+        (byte) 0xe0, (byte) 0xe0, (byte) 0xc0, (byte) 0xc0,
+        (byte) 0xc0, (byte) 0x80, (byte) 0x80, (byte) 0x80 };
+    private static final byte[] right = { 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0xf8, (byte) 0xf8, 
+        (byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+    private static final byte[] left = { 
+        (byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+    private static final byte[] upFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x04,
+        (byte) 0x1c, (byte) 0x7c, (byte) 0x1c, (byte) 0x04, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] downFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x80,
+        (byte) 0x70, (byte) 0x7c, (byte) 0x70, (byte) 0x80, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] rightFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x10, (byte) 0x38, 
+        (byte) 0x7c, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] leftFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7c, 
+        (byte) 0x38, (byte) 0x10, (byte) 0x00, (byte) 0x00 };
 	
 	
 	/** Messenger for communicating with service. */
@@ -202,7 +226,7 @@ public class TestActivity extends Activity {
 		
 		// allow sending of images if bound
 		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
-		if (mBtAdapter != null && !mBtAdapter.isDiscovering())
+		if (mBtAdapter != null && !mBtAdapter.isDiscovering() && mIsBound)
 		{
             mSendImageButton.setEnabled(true);
             mCancelAllButton.setEnabled(true);
@@ -328,13 +352,13 @@ public class TestActivity extends Activity {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
 		if (temp.getText().toString().startsWith("U"))
-			return upWide;
+			return upFive;
 		if (temp.getText().toString().startsWith("D"))
-			return down;
+			return downFive;
 		if (temp.getText().toString().startsWith("L"))
-			return left;
+			return leftFive;
 		if (temp.getText().toString().startsWith("R"))
-			return right;
+			return rightFive;
 		return null;
 	}
 

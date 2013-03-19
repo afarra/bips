@@ -102,13 +102,15 @@
                 android:id="@+id/button_send_image"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/send_button_text" />
+                android:text="@string/send_button_text"
+        android:enabled="false" />
 
             <Button
                 android:id="@+id/button_cancel_current"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/send_cancel_text" />
+                android:text="@string/send_cancel_text"
+        android:enabled="false" />
         </TableRow>
 
         <TableRow
@@ -120,11 +122,13 @@
                 android:id="@+id/button_cancel_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/send_cancel_all_text" />
+                android:text="@string/send_cancel_all_text"
+        android:enabled="false" />
             <Button
                 android:id="@+id/button_periodic_request"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+        android:enabled="false"
                  />
         </TableRow>
     </TableLayout>
