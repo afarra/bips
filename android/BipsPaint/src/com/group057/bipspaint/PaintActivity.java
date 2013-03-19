@@ -13,13 +13,68 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.BaseAdapter;
+import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
 
 public class PaintActivity extends Activity {
+    public class ImageAdapter extends BaseAdapter {
+        private Context mContext;
 
+        public ImageAdapter(Context c) {
+            mContext = c;
+        }
+
+        public int getCount() {
+            return mThumbIds.length;
+        }
+
+        public Object getItem(int position) {
+            return null;
+        }
+
+        public long getItemId(int position) {
+            return 0;
+        }
+
+        // create a new ImageView for each item referenced by the Adapter
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView imageView;
+            if (convertView == null) {  // if it's not recycled, initialize some attributes
+                imageView = new ImageView(mContext);
+                imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
+                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                imageView.setPadding(8, 8, 8, 8);
+            } else {
+                imageView = (ImageView) convertView;
+            }
+
+            imageView.setImageResource(mThumbIds[position]);
+            return imageView;
+        }
+
+        // references to our images
+        private Integer[] mThumbIds = {
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black,
+                R.drawable.white, R.drawable.black
+        };
+    }
   
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -34,6 +89,8 @@ public class PaintActivity extends Activity {
 
     private static final int BIPS_IMAGE_WIDTH = 20;
 
+    GridView mGridView = null;
+    
     /** Messenger for communicating with service. */
     IRemoteService mIRemoteService = null;
     /** Flag indicating whether we have called bind on the service. */
@@ -46,7 +103,18 @@ public class PaintActivity extends Activity {
 
         setContentView(R.layout.activity_paint);
         
+        GridView gridview = (GridView) findViewById(R.id.gridview);
+        gridview.setAdapter(new ImageAdapter(this));
+
+        gridview.setOnItemClickListener(new OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                Toast.makeText(PaintActivity.this, "" + position, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        
         doBindService();
+        
     }
 
     @Override
@@ -54,7 +122,6 @@ public class PaintActivity extends Activity {
         super.onStart();
         if (D)Log.v(TAG, "++ ON START ++");
 
-      
     }
 
     @Override
