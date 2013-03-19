@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">CallAlert</string>
     <string name="service_button">Service Button</string>
+    <string name="test_ab">Test AB</string>
     <string name="explanation">Run this application and tap the button to enable service.
         Any calls and texts will be picked up and a notification is sent to the projector.</string>
 </resources>

@@ -47,6 +47,7 @@ public class CallAlert extends Activity {
 
     // Buttons
     Button mStartServiceButton;
+    Button mTestAbButton;
 
     // BroadcastReceiver for text alerts
     private BroadcastReceiver mTextAlert = new BroadcastReceiver() {
@@ -134,6 +135,46 @@ public class CallAlert extends Activity {
         return result;
     }
 
+    public Bitmap initialsToBitmapFivePixel(String initials) {
+        // Build an image of the initials
+        Bitmap alphabetPic = BitmapFactory.decodeResource(getResources(),
+                R.drawable.ascii_small);
+        Bitmap result = Bitmap.createBitmap(BIPS_IMAGE_WIDTH,
+                alphabetPic.getHeight(), Bitmap.Config.ARGB_8888);
+        // each character will be tightly packed into arrays, 4
+        // pixel width
+        int charPixelWidth = 4; 
+        int charPixelArea = charPixelWidth * alphabetPic.getHeight();
+        int[] pixConstruction = new int[BIPS_IMAGE_WIDTH
+                * alphabetPic.getHeight()];
+
+        // fill with white pixels (-1 is 255)
+        for (int i = 0; i < pixConstruction.length; ++i)
+        {
+            pixConstruction[i] = -1;
+        }
+
+        // each character is 4 pixels wide, start getting pixels at an
+        // offset character of the ASCII code of the letter (starts at code 32)
+  
+        // Put the first letter to the front of the array
+        alphabetPic.getPixels(pixConstruction, 0, charPixelWidth,
+                ((int) initials.toCharArray()[0] - 32) * charPixelWidth, 0, charPixelWidth,
+                alphabetPic.getHeight());
+        // Append the last name letter to the array (offset of char pixel area)
+        alphabetPic.getPixels(pixConstruction, charPixelArea, charPixelWidth,
+                ((int) initials.toCharArray()[1] - 32) * charPixelWidth, 0, charPixelWidth,
+                alphabetPic.getHeight());
+
+        // construct the bitmap of initials to be sent
+        result.setPixels(pixConstruction, 0, charPixelWidth, 0, 0, charPixelWidth,
+                alphabetPic.getHeight());
+        result.setPixels(pixConstruction, charPixelArea, charPixelWidth, charPixelWidth, 
+                0, charPixelWidth, alphabetPic.getHeight());
+        if (D) Log.v(TAG, "Converted to image small: " + initials);
+        return result;
+    }
+
     public Bitmap numberToNameImage(String incomingNumber)
     {
         //return image
@@ -185,7 +226,7 @@ public class CallAlert extends Activity {
                 }
 
                 // prepare image of initials for projection
-                initialsImage = initialsToBitmap(initialsString);
+                initialsImage = initialsToBitmapFivePixel(initialsString);
             } catch (NullPointerException e) {
                 Log.e(TAG,
                         "Invalid contact name format. Not displaying");
@@ -285,6 +326,24 @@ public class CallAlert extends Activity {
             public void onClick(View v) {
                 // Bind Bips
                 doBindService();
+            }
+        });
+        // Initialize the service button with a listener that for click events
+        mTestAbButton = (Button) findViewById(R.id.test_ab);
+        mTestAbButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                // Bind Bips
+                if (mIsBound)
+                {
+                    try {
+                        mIRemoteService.bitmapRequestQueue(initialsToBitmapFivePixel("AB"), 
+                                5000, (byte) 0, getPackageName());
+                    } catch (RemoteException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                        
+                }
             }
         });
     }
