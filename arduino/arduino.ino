@@ -6,19 +6,19 @@
 
 // Constant Decalaraion
 const short DBG_LED_PIN = 13;
-const short LASER0_PIN = 3;
-const short LASER1_PIN = 4;
-const short LASER2_PIN = 5;
-const short LASER3_PIN = 6;
-const short LASER4_PIN = 7;
+const short LASER0_PIN = 4;
+const short LASER1_PIN = 5;
+const short LASER2_PIN = 6;
+const short LASER3_PIN = 7;
+const short LASER4_PIN = 8;
 //const short LASER5_PIN = 10;
 //const short LASER6_PIN = 11;
 //const short LASER7_PIN = 12;
 const short BT_RX = 9;
 const short BT_TX = 10;
-const short TILT1_PIN = 11;    // x direction
-const short TILT2_PIN = 12;    // y direction
-const short IR_PIN = 2;
+const short TILT1_PIN = A0;    // x direction or position 1
+const short TILT2_PIN = A1;    // y direction or position 2
+const short IR_PIN = 12;
 
 // Globals used in ISR
 volatile unsigned long rotation_period = 0; // Ranges from 50k - 75k - 100k microseconds (face time: 8k - 12.5k - 16k)
@@ -227,7 +227,7 @@ void loop(){
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
         // or if a tilt is detected
-        if (image_time < millis() /*|| tilt_detected*/)
+        if (image_time < millis() || tilt_detected)
         {
           output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
         }
