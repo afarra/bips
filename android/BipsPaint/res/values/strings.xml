@@ -4,5 +4,6 @@
     <string name="app_name">BipsPaint</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string>
+    <string name="project_image">Project Image</string>
 
 </resources>

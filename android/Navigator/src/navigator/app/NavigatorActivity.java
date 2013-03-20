@@ -83,14 +83,19 @@ public class NavigatorActivity extends Activity{
 	
 	private String directionsString = "";
 	
+    private static final byte[] right = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x10, (byte) 0x38, 
+        (byte) 0x7c, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] left = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7c, 
+        (byte) 0x38, (byte) 0x10, (byte) 0x00, (byte) 0x00 };
 	
-	
-	private static final byte[] right = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x20, (byte) 0x20, (byte) 0xf8, (byte) 0x70, (byte) 0x20, 0,
-		0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x70, (byte) 0xf8, (byte) 0x20, (byte) 0x20, (byte) 0x20, 0,
-		0, 0, 0, 0, 0, 0, 0 };
 	
 	private static final String NAV = "Navigator";
 	

@@ -11,10 +11,12 @@
         android:layout_height="400dp"
         android:layout_x="1dp"
         android:layout_y="1dp"
-        android:apiKey="AIzaSyBKFuP51IpZN-qBa5Uz8TCuiggQ6t-IZ9c"
+        android:apiKey="0sRoZd5lZbFJSZetsNgxdwclLC7cFidoa8OqYgw"
         android:clickable="true" >
 
     </com.google.android.maps.MapView>
+    <!--    android:apiKey="AIzaSyBKFuP51IpZN-qBa5Uz8TCuiggQ6t-IZ9c" -->
+    
     <Button
         android:id="@+id/setDirection"
         android:layout_width="66dp"

@@ -12,20 +12,26 @@ import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
-import android.view.Menu;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
 import android.widget.Toast;
 
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
 
 public class PaintActivity extends Activity {
+    
+    int[][] pixelTrack = new int[BIPS_LASER_COUNT][BIPS_IMAGE_WIDTH];
+    
     public class ImageAdapter extends BaseAdapter {
         private Context mContext;
 
@@ -38,7 +44,7 @@ public class PaintActivity extends Activity {
         }
 
         public Object getItem(int position) {
-            return null;
+            return mThumbIds[position];
         }
 
         public long getItemId(int position) {
@@ -50,9 +56,8 @@ public class PaintActivity extends Activity {
             ImageView imageView;
             if (convertView == null) {  // if it's not recycled, initialize some attributes
                 imageView = new ImageView(mContext);
-                imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
+                imageView.setLayoutParams(new GridView.LayoutParams(40, 40));
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                imageView.setPadding(8, 8, 8, 8);
             } else {
                 imageView = (ImageView) convertView;
             }
@@ -63,33 +68,72 @@ public class PaintActivity extends Activity {
 
         // references to our images
         private Integer[] mThumbIds = {
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black,
-                R.drawable.white, R.drawable.black
-        };
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke,
+                R.drawable.whitestroke, R.drawable.whitestroke
+            };
     }
   
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.paint, menu);
-        return true;
-    }
 
     // Debug var
     private static final boolean D = true;
     private static final String TAG = "BipsPaintApp";
 
     private static final int BIPS_IMAGE_WIDTH = 20;
+    private static final int BIPS_LASER_COUNT = 5;
 
+    // UI
+    Button mProjectButton = null;
     GridView mGridView = null;
+    Button mReset = null;
+    CheckBox mEraser = null;
     
     /** Messenger for communicating with service. */
     IRemoteService mIRemoteService = null;
@@ -103,16 +147,63 @@ public class PaintActivity extends Activity {
 
         setContentView(R.layout.activity_paint);
         
-        GridView gridview = (GridView) findViewById(R.id.gridview);
-        gridview.setAdapter(new ImageAdapter(this));
+        mGridView = (GridView) findViewById(R.id.gridview);
+        mGridView.setAdapter(new ImageAdapter(this));
 
-        gridview.setOnItemClickListener(new OnItemClickListener() {
+        mGridView.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-                Toast.makeText(PaintActivity.this, "" + position, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(PaintActivity.this, "" + position, Toast.LENGTH_SHORT).show();
+
+                ImageView iv = (ImageView) v;
+               
+                // toggle the pixel colour
+                if (!mEraser.isChecked())
+                {
+                    iv.setImageResource(R.drawable.blackstroke);
+                    iv.setTag(R.drawable.blackstroke);
+                    pixelTrack[position/BIPS_IMAGE_WIDTH][position % BIPS_IMAGE_WIDTH] = 1; 
+                }
+                else
+                {
+                    iv.setImageResource(R.drawable.whitestroke);
+                    iv.setTag(R.drawable.whitestroke);
+                    pixelTrack[position/BIPS_IMAGE_WIDTH][position % BIPS_IMAGE_WIDTH] = 0; 
+                }
+                
             }
+            
         });
 
-        
+        mProjectButton = (Button) findViewById(R.id.project_image);
+        mProjectButton.setEnabled(false);
+        mProjectButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+               
+
+                // Bind Bips
+                try {
+                    mIRemoteService.imageRequestQueue(getGridPixels(), 15000, 
+                            (byte) 0, getPackageName());
+                } catch (RemoteException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        });
+//        mReset = (Button) findViewById(R.id.button1);
+//        mReset.setOnClickListener(new OnClickListener() {
+//            public void onClick(View v) {
+//               
+//                // set all squares white
+//                for (int i = 0; i < BIPS_IMAGE_WIDTH * BIPS_LASER; i++)
+//                {
+//                    mGridView.
+//                }
+//                
+//            }
+//        });
+
+        mEraser = (CheckBox) findViewById(R.id.checkBox1);
         doBindService();
         
     }
@@ -121,6 +212,11 @@ public class PaintActivity extends Activity {
     public void onStart() {
         super.onStart();
         if (D)Log.v(TAG, "++ ON START ++");
+        
+        if (mIsBound)
+        {
+            mProjectButton.setEnabled(true);
+        }
 
     }
 
@@ -139,6 +235,22 @@ public class PaintActivity extends Activity {
         doUnbindService();
     }
 
+    byte[] getGridPixels()
+    {
+        byte[] image = new byte[BIPS_IMAGE_WIDTH];
+
+        for (int i = 0; i < BIPS_IMAGE_WIDTH; i++)
+        {
+            for (int j = 0; j < BIPS_LASER_COUNT; j++)
+            {
+                byte pixel = (pixelTrack[j][i] == 1) ? (byte)0x01 : (byte)0x00; 
+                        
+                image[i] = (byte) ((byte)image[i] | (byte)(pixel<<j+1));
+            }
+        }
+
+        return image;
+    }
     /**
      * Target we publish for clients to send messages to Incoming Handler.
      */
