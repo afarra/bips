@@ -19,7 +19,6 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.android.maps.GeoPoint;
-import com.group057.BipsService;
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
 
@@ -80,8 +79,7 @@ public class NavigatorActivity extends Activity{
 	IRemoteService mIRemoteService = null;
 	/** Flag indicating whether we have called bind on the service. */
 	boolean mIsBound;
-	/** Some text view we are using to show state information. */
-	//static TextView mCallbackText;
+
 	
 	private String directionsString = "";
 	
@@ -100,15 +98,22 @@ public class NavigatorActivity extends Activity{
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        Log.v(NAV, "+++ ON CREATE +++");
+        
         setContentView(R.layout.main);
         setDestination = (Button)findViewById(R.id.swapMapView);
         setDestination.setOnClickListener(swapMapView);
+        
         getDirections = (Button)findViewById(R.id.getDirections);
         getDirections.setOnClickListener(getDirectionsListener);
+        
         directions = (EditText)findViewById(R.id.directions);
         directions.setKeyListener(null);
+        
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationProvider = locationManager.getProvider(LocationManager.GPS_PROVIDER);
+        
         if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
         	Intent settingsIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         	startActivity(settingsIntent);
@@ -117,18 +122,7 @@ public class NavigatorActivity extends Activity{
         Button simulation = (Button)findViewById(R.id.simulation);
         simulation.setOnClickListener(startSimulation);
         
-        // If BT is not on, request that it be enabled.
-        // setupChat() will then be called during onActivityResult
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!mBluetoothAdapter.isEnabled()) {
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-        // Otherwise, setup the chat session
-        } else {
-            // Bind Bips
-            doBindService();
-        }
-
+        doBindService();
    
 
         // Define a listener that responds to location updates
@@ -137,7 +131,7 @@ public class NavigatorActivity extends Activity{
             	if (isBetterLocation(location, currentBestLocation)) {
             		currentBestLocation = location;
             		reCalcDist = true;
-            		Log.d(NAV, "Test1");
+            		Log.d(NAV, "better location: require recalculation");
             	}
             	              
             }
@@ -158,9 +152,16 @@ public class NavigatorActivity extends Activity{
         
     }
     
-    public void onDestory() {
-    	turnByturn.stop();
-    	doUnbindService();
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.v(NAV, "--- ON DESTROY ---");
+        
+        // stop the turnbyturn thread
+    	//turnByturn.stop();
+    	running = false;
+        
+        doUnbindService();
     }
 
 
@@ -224,6 +225,8 @@ public class NavigatorActivity extends Activity{
      */
     private void startApplication() {
     	
+        Log.v(NAV, "++ START APPLICATION ++");
+        
     	Step s = steps.pop(); //First Step
     	Step upComingStep = steps.getFirst();
     	
@@ -258,7 +261,7 @@ public class NavigatorActivity extends Activity{
     			tmpnextDist = nextDist;
     			
     			reCalcDist = false;
-    			Log.d(NAV, "Test2");
+    			Log.d(NAV, "recalculation handled");
     			//Log.d(NAV, "Distance: " + distance);
     			//Log.d(NAV, "nextDist: " + nextDist);    		
 	    		if( distance < 30 ) {
@@ -268,12 +271,14 @@ public class NavigatorActivity extends Activity{
 			    			switch(upComingStep.getCurrentArrow()) {
 			    				case LEFT:
 			    					mIRemoteService.imageRequestQueue(left, 5000
-			    							, (byte) 0, Process.myPid());
+			    							, (byte) 0, getPackageName());
 			    				break;
 			    				case RIGHT:
 			    					mIRemoteService.imageRequestQueue(right, 5000
-			    							, (byte) 0, Process.myPid());
+			    							, (byte) 0, getPackageName());
 			    				break;
+                            default:
+                                break;
 			    			}
 			    		} catch (RemoteException e) {
 			    			// TODO Auto-generated catch block
@@ -296,7 +301,8 @@ public class NavigatorActivity extends Activity{
 	    	    	
 	    			if (distance < 8 || checkPointReached) {
 		    			try {
-		    				mIRemoteService.imageRequestCancelAll(Process.myPid());
+		    			    Log.v(NAV, "Package is cancelling: " + getPackageName());
+		    				mIRemoteService.imageRequestCancelAll(getPackageName());
 		    				s = steps.pop();
 		    				if (steps.size() != 0) {
 		    					upComingStep = steps.getFirst();
@@ -311,6 +317,7 @@ public class NavigatorActivity extends Activity{
 	    					//Steps List has been finished, user has reached destination.
 	    					directionsString = "\n Arrived at destination";
 	    					running = false;
+                            reCalcDist = true;
 	    				} catch (RemoteException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -330,6 +337,7 @@ public class NavigatorActivity extends Activity{
     		
     	}
     	directionsString = "Arrived at the destination :D";
+        reCalcDist = true;
 	    	runOnUiThread(new Runnable(){
 			public void run() {
 				updateDirections();
@@ -373,13 +381,6 @@ public class NavigatorActivity extends Activity{
     			to = new GeoPoint(b.getInt("destLat"),b.getInt("destLong"));
     		}
     	break;
-        case REQUEST_ENABLE_BT:
-            // When the request to enable Bluetooth returns
-            if (resultCode == Activity.RESULT_OK) {
-                // Bluetooth is now enabled, so set up a chat session
-                doBindService();
-            } 
-        break;
     	}
     }
     
@@ -387,38 +388,40 @@ public class NavigatorActivity extends Activity{
     private OnClickListener startSimulation = new OnClickListener() {
 		public void onClick(View v) {
 			try {
-
-				List<String> data = new ArrayList<String>();
-				InputStream is = getAssets().open("data.txt");
-				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-				String line = null;
-				while ((line = reader.readLine()) != null) {
-
-					data.add(line);
-				}
-				
-				//43.47353	-80.53231
-				currentBestLocation = new Location("");
-				currentBestLocation.setLatitude(43.471588);
-				currentBestLocation.setLongitude(-80.537426);
-		           locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER,
-		        		   currentBestLocation);
-
-        		to = new GeoPoint(43476849, -80540408);
-        		if(retrieveDirections != null && retrieveDirections.isAlive()) {
-        			retrieveDirections.stop();
+                if(retrieveDirections == null || !retrieveDirections.isAlive()) {
+                    List<String> data = new ArrayList<String>();
+    				InputStream is = getAssets().open("data.txt");
+    				BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+    				String line = null;
+    				while ((line = reader.readLine()) != null) {
+    
+    					data.add(line);
+    				}
+    				
+    				//43.47353	-80.53231
+    				currentBestLocation = new Location("");
+    				currentBestLocation.setLatitude(43.471588);
+    				currentBestLocation.setLongitude(-80.537426);
+    		           locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER,
+    		        		   currentBestLocation);
+    
+            		to = new GeoPoint(43476849, -80540408);
+            		
+            		
+            		mLP = new MockLocationProvider(locationManager, LocationManager.GPS_PROVIDER, data);
+            		
+                    retrieveDirections = new Thread (new Runnable() {
+                    	public void run() {
+                    		simulation = true;
+                    		RetrieveDirections();
+                    	}
+                    });
+                    
+                    Log.v(NAV, "Created retrieveDirections thread - ID: " + retrieveDirections.getId());
+                    retrieveDirections.setName("retrieveDirections");
+                    retrieveDirections.start();
         		}
-        		
-        		mLP = new MockLocationProvider(locationManager, LocationManager.GPS_PROVIDER, data);
-        		
-                retrieveDirections = new Thread (new Runnable() {
-                	public void run() {
-                		simulation = true;
-                		RetrieveDirections();
-                	}
-                });
-                
-                retrieveDirections.start();
+				
 				
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -428,25 +431,30 @@ public class NavigatorActivity extends Activity{
     
     private OnClickListener getDirectionsListener = new OnClickListener() {
         public void onClick(View v) {
-        	if(currentBestLocation != null && to != null) {
-        		
-        		//retrieveDirections thread should be stopped if it exists
-        		if(retrieveDirections != null && retrieveDirections.isAlive()) {
-        			retrieveDirections.stop();
-        		}
-        		
-                retrieveDirections = new Thread (new Runnable() {
-                	public void run() {
-                		RetrieveDirections();
-                	}
-                });
-        		
-        		retrieveDirections.start();
-        	} else if (currentBestLocation == null) {
-        		directions.setText("Could not find your current location");
-        	} else if (to == null) {
-        		directions.setText("Please select a destination");
-        	}
+        	
+    		if(retrieveDirections == null || !retrieveDirections.isAlive()) {
+                if (currentBestLocation != null && to != null) {
+
+                    retrieveDirections = new Thread(new Runnable() {
+                        public void run() {
+                            RetrieveDirections();
+                        }
+                    });
+
+                    Log.v(NAV, "Created retrieveDirections thread - ID: "
+                            + retrieveDirections.getId());
+                    retrieveDirections.setName("retrieveDirections");
+                    retrieveDirections.start();
+                } 
+                else if (currentBestLocation == null) 
+                {
+                    directions.setText("Could not find your current location");
+                } 
+                else if (to == null) 
+                {
+                    directions.setText("Please select a destination");
+                }
+    		}
         }
     };
     
@@ -488,13 +496,20 @@ public class NavigatorActivity extends Activity{
 			}
     	});
     	 
-        running = true;
+        running = false;
         
-        
+        //nasty polling solution to wait for turnByturn to end
         //turnByturn thread should be stopped if it exists
-        if(turnByturn != null && turnByturn.isAlive()) {
-        	turnByturn.stop();
+        while (turnByturn != null && turnByturn.isAlive()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
+        
+        running = true;
         
         turnByturn = new Thread(new Runnable() {
 			public void run() {
@@ -502,6 +517,8 @@ public class NavigatorActivity extends Activity{
 			}
         });
         
+        Log.v(NAV, "Created turnByturn thread - ID: " + turnByturn.getId());
+        turnByturn.setName("turnByturn");
         turnByturn.start();
         
         if(simulation) {
@@ -557,84 +574,92 @@ public class NavigatorActivity extends Activity{
         }
 	}
     	
-    	/**
-    	* Handler of incoming messages from service.
-    	*/
-    	static class IncomingHandler extends Handler {
-    	   @Override
-    	   public void handleMessage(Message msg) {
-    	       switch (msg.what) {
-    	           case BipsService.MSG_SET_VALUE:
-    	               //mCallbackText.setText("Received from service: " + msg.arg1);
-    	               break;
-    	           default:
-    	               super.handleMessage(msg);
-    	       }
-    	   }
-    	}
+	/**
+	* Handler of incoming messages from service.
+	*/
+	/*static class IncomingHandler extends Handler {
+	   @Override
+	   public void handleMessage(Message msg) {
+	       switch (msg.what) {
+	           case BipsService.MSG_SET_VALUE:
+	               //mCallbackText.setText("Received from service: " + msg.arg1);
+	               break;
+	           default:
+	               super.handleMessage(msg);
+	       }
+	   }
+	}*/
 
-    	final IncomingHandler mHandler = new IncomingHandler();
-    	/**
-    	* Target we publish for clients to send messages to Incoming Handler.
-    	*/
-    	final Messenger mMessenger = new Messenger(mHandler);
+	final Handler mHandler = new Handler();
+	/**
+	* Target we publish for clients to send messages to Incoming Handler.
+	*/
+	final Messenger mMessenger = new Messenger(mHandler);
     	
     	
-    	/**
-    	* Class for interacting with the main interface of the service.
-    	*/
-    	private ServiceConnection mConnection = new ServiceConnection() {
-    		   public void onServiceConnected(ComponentName className, IBinder service) {
-    		        // Following the example above for an AIDL interface,
-    		        // this gets an instance of the IRemoteInterface, which we can use to call on the service
-    		        mIRemoteService = IRemoteService.Stub.asInterface(service);
+	/**
+	* Class for interacting with the main interface of the service.
+	*/
+	private ServiceConnection mConnection = new ServiceConnection() {
+	   public void onServiceConnected(ComponentName className, IBinder service) {
+	        // Following the example above for an AIDL interface,
+	        // this gets an instance of the IRemoteInterface, which we can use to call on the service
+	        mIRemoteService = IRemoteService.Stub.asInterface(service);
 
-    				// We want to monitor the service for as long as we are
-    				// connected to it.
-    				try {
-    					mIRemoteService.registerCallback(mCallback);
-    				} catch (RemoteException e) {
-    					// In this case the service has crashed before we could even
-    					// do anything with it; we can count on soon being
-    					// disconnected (and then reconnected if it can be restarted)
-    					// so there is no need to do anything here.
-    				}
+			// We want to monitor the service for as long as we are
+			// connected to it.
+			try {
+				mIRemoteService.registerCallback(mCallback);
+			} catch (RemoteException e) {
+				// In this case the service has crashed before we could even
+				// do anything with it; we can count on soon being
+				// disconnected (and then reconnected if it can be restarted)
+				// so there is no need to do anything here.
+			}
 
-    		    }
+	    }
 
-    		    // Called when the connection with the service disconnects unexpectedly
-    		    public void onServiceDisconnected(ComponentName className) {
-    		        mIRemoteService = null;
-    		    }
-    	};
+	    // Called when the connection with the service disconnects unexpectedly
+	    public void onServiceDisconnected(ComponentName className) {
+	        mIRemoteService = null;
+	    }
+	};
     	
 
-        // ----------------------------------------------------------------------
-        // Code showing how to deal with callbacks.
-        // ----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
+    // Code showing how to deal with callbacks.
+    // ----------------------------------------------------------------------
 
-        /**
-         * This implementation is used to receive callbacks from the remote
-         * service.
+    /**
+     * This implementation is used to receive callbacks from the remote
+     * service.
+     */
+    private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
+    	public int getPid(){
+            return Process.myPid();
+        }
+    	
+    	/**
+         * This is called by the remote service regularly to tell us about
+         * new values.  Note that IPC calls are dispatched through a thread
+         * pool running in each process, so the code executing here will
+         * NOT be running in our main thread like most other things -- so,
+         * to update the UI, we need to use a Handler to hop over there.
          */
-        private IRemoteServiceCallback mCallback = new IRemoteServiceCallback.Stub() {
-        	public int getPid(){
-                return Process.myPid();
-            }
-        	
-        	/**
-             * This is called by the remote service regularly to tell us about
-             * new values.  Note that IPC calls are dispatched through a thread
-             * pool running in each process, so the code executing here will
-             * NOT be running in our main thread like most other things -- so,
-             * to update the UI, we need to use a Handler to hop over there.
-             */
-            public void valueChanged(int value) {
-                mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
-            }
-        };
-
-    
+        public void valueChanged(int value) {
+            mHandler.sendMessage(mHandler.obtainMessage(0, value, 0));
+        }
+        
+        /**
+         * This is called by the service to find out what applications are binding
+         * and using the projector to allow the user to assign priority to 
+         * which applications they prefer to see from the projector over other apps.
+         */
+        public String getClientPackageName()
+        {
+            return getPackageName();
+        }
+    };
 }
 
 

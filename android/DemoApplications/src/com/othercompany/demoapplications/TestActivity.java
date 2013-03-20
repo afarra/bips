@@ -9,25 +9,21 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
 import android.view.View.OnClickListener;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.group057.BipsService;
 import com.group057.IRemoteService;
 import com.group057.IRemoteServiceCallback;
-import com.group057.R;
 
 public class TestActivity extends Activity {
 	// Debugging
@@ -35,38 +31,53 @@ public class TestActivity extends Activity {
 	private static final boolean D = true;
 
 	// Images to send
-	private static final byte[] up = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x60, (byte) 0xff, (byte) 0x60, (byte) 0x20, 0, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] down = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x30, (byte) 0xff, (byte) 0x30, (byte) 0x20, 0, 0, 0, 0, 0,
-			0, 0, 0 };
-	private static final byte[] right = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x20, (byte) 0x20, (byte) 0xf8, (byte) 0x70, (byte) 0x20, 0,
-			0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left = { 0, 0, 0, 0, 0, 0, (byte) 0x20,
-			(byte) 0x70, (byte) 0xf8, (byte) 0x20, (byte) 0x20, (byte) 0x20, 0,
-			0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] up_eight = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x20,
-		(byte) 0x40, (byte) 0xff, (byte) 0x40, (byte) 0x20, 0, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] down_eight = { 0, 0, 0, 0, 0, 0, 0, (byte) 0x04,
-		(byte) 0x02, (byte) 0xff, (byte) 0x02, (byte) 0x04, 0, 0, 0, 0, 0,
-		0, 0, 0 };
-	private static final byte[] right_eight = { 0, 0, 0, 0, 0, 0, (byte) 0x08,
-		(byte) 0x08, (byte) 0x49, (byte) 0x2a, (byte) 0x1c, (byte) 0x08, 0,
-		0, 0, 0, 0, 0, 0, 0 };
-	private static final byte[] left_eight = { 0, 0, 0, 0, 0, (byte) 0x08, (byte) 0x1c,
-		(byte) 0x2a, (byte) 0x49, (byte) 0x08, (byte) 0x08, (byte) 0x08, 0,
-		0, 0, 0, 0, 0, 0, 0 };
-
-
-    // Intent request codes
-    private static final int REQUEST_ENABLE_BT = 1;
-    
-
-	// Local Bluetooth adapter
-	private BluetoothAdapter mBluetoothAdapter = null;
+    private static final byte[] upWide = { 
+        (byte) 0x10, (byte) 0x10, (byte) 0x10, (byte) 0x30, 
+        (byte) 0x30, (byte) 0x30, (byte) 0x70, (byte) 0x70,
+        (byte) 0x70, (byte) 0xf0, (byte) 0xf0, (byte) 0x70, 
+        (byte) 0x70, (byte) 0x70, (byte) 0x30, (byte) 0x30, 
+        (byte) 0x30, (byte) 0x10, (byte) 0x10, (byte) 0x10 };
+    private static final byte[] down = { 
+        (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xc0,
+        (byte) 0xc0, (byte) 0xc0, (byte) 0xe0, (byte) 0xe0,
+        (byte) 0xe0, (byte) 0xf0, (byte) 0xf0, (byte) 0xe0,
+        (byte) 0xe0, (byte) 0xe0, (byte) 0xc0, (byte) 0xc0,
+        (byte) 0xc0, (byte) 0x80, (byte) 0x80, (byte) 0x80 };
+    private static final byte[] right = { 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0xf8, (byte) 0xf8, 
+        (byte) 0xf8, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+    private static final byte[] left = { 
+        (byte) 0x60, (byte) 0x60, (byte) 0xf0, (byte) 0xf0, (byte) 0xf0, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, 
+        (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60, (byte) 0x60};
+    private static final byte[] upFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x04,
+        (byte) 0x1c, (byte) 0x7c, (byte) 0x1c, (byte) 0x04, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] downFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x80,
+        (byte) 0x70, (byte) 0x7c, (byte) 0x70, (byte) 0x80, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] rightFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x10, (byte) 0x38, 
+        (byte) 0x7c, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+    private static final byte[] leftFive = { 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 
+        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7c, 
+        (byte) 0x38, (byte) 0x10, (byte) 0x00, (byte) 0x00 };
 	
 	
 	/** Messenger for communicating with service. */
@@ -74,28 +85,26 @@ public class TestActivity extends Activity {
     IRemoteService mIRemoteService = null;
 	/** Flag indicating whether we have called bind on the service. */
 	boolean mIsBound;
+	BluetoothAdapter mBtAdapter = null;
 
 	/** Some text view we are using to show state information. */
 	static TextView mCallbackText;
 	// Layout Views
-	private Button mSendButton;
+	private Button mStartServiceButton;
 	private Button mSendImageButton;
 	private Button mCancelCurrentButton;
-	private Button mCancelAllButton;
+    private Button mCancelAllButton;
+    private Button mPeriodicButton;
 	private RadioGroup mImageRadio;
-	private RadioGroup mPriorityRadio;
 	byte[] mImageChosen;
-	byte mPriorityChosen = (byte)0xffff;
 	private EditText mDurationText;
-
+	private boolean mPeriodicFlag = false;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		if (D)
 			Log.e(TAG, "+++ ON CREATE +++");
-
-        // Get the local Bluetooth adapter
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         
 		// Set up the window layout
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
@@ -109,7 +118,6 @@ public class TestActivity extends Activity {
 			Log.e(TAG, "++ ON START ++");
         
 		mCallbackText = (TextView) findViewById(R.id.textView_callback);
-		mPriorityRadio = (RadioGroup) findViewById(R.id.radioGroup2);
 		mImageRadio = (RadioGroup) findViewById(R.id.radioGroup1);
 		mDurationText = (EditText) findViewById(R.id.editText1);
 
@@ -119,26 +127,12 @@ public class TestActivity extends Activity {
 		mSendImageButton.setEnabled(false);
 		mSendImageButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				mPriorityChosen = getPriorityFromRadio(mPriorityRadio);
 				mImageChosen = getImageFromRadio(mImageRadio);
-				if (mImageChosen != null && mPriorityChosen >= 0
-						&& mDurationText.getText() != null) {
-/*
-					Message msg = BipsService.createImageRequestMessage(
-							mImageChosen, (int) Integer.parseInt(mDurationText
-									.getText().toString()), mPriorityChosen,
-							mMessenger);
+				if (mImageChosen != null && mDurationText.getText() != null) {
 
-					// send off the message
-					try {
-						mService.send(msg);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
 	                try {
 	        			mIRemoteService.imageRequestQueue(mImageChosen, Integer.parseInt(mDurationText
-								.getText().toString()), mPriorityChosen, Process.myPid());
+								.getText().toString()), (byte)0, getPackageName());
 	        		} catch (RemoteException e) {
 	        			// TODO Auto-generated catch block
 	        			e.printStackTrace();
@@ -153,53 +147,64 @@ public class TestActivity extends Activity {
 		mCancelCurrentButton.setEnabled(false);
 		mCancelCurrentButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				/*
-				 * Message msg =
-				 * BipsService.cancelCurrentImageRequestMessage(mMessenger); //
-				 * send off the message try { mService.send(msg); } catch
-				 * (RemoteException e) { // TODO Auto-generated catch block
-				 * e.printStackTrace(); }
-				 */
 				try {
-					mIRemoteService.imageRequestCancelCurrent(Process.myPid());
+					mIRemoteService.imageRequestCancelCurrent(getPackageName());
 				} catch (RemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		});
-		// Initialize the cancel all images button with a listener that for click
-		// events
-		mCancelAllButton = (Button) findViewById(R.id.button_cancel_all);
-		mCancelAllButton.setEnabled(false);
-		mCancelAllButton.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-/*
-					Message msg = BipsService.cancelAllImagesRequestMessage(mMessenger);
+        
+        // Initialize the cancel all images button with a listener that for click
+        // events
+        mCancelAllButton = (Button) findViewById(R.id.button_cancel_all);
+        mCancelAllButton.setEnabled(false);
+        mCancelAllButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
 
-					// send off the message
-					try {
-						mService.send(msg);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
-				
-				try {
-					mIRemoteService.imageRequestCancelAll(Process.myPid());
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-			}
-		});
+                
+                try {
+                    mIRemoteService.imageRequestCancelAll(getPackageName());
+                } catch (RemoteException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                
+            }
+        });
+        
+        // Initialize the periodic requests button. Pressing the button toggles periodic
+        // requests which last for 
+        mPeriodicButton = (Button) findViewById(R.id.button_periodic_request);
+        mPeriodicButton.setEnabled(false);
+        mPeriodicButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                
+                mPeriodicFlag = !mPeriodicFlag;
+                if (mPeriodicFlag)
+                {
+                    if (mPeriodicRequestThread == null || !mPeriodicRequestThread.isAlive())
+                    {
+                        mPeriodicRequestThread = new Thread(mPeriodicRequestProc);
+                        mPeriodicRequestThread.start();
+                        
+                        mPeriodicButton.setText("Stop periodic requests");
+                    }
+                }
+                else
+                {
+                    mPeriodicButton.setText("Start periodic requests");
+                }
+                
+            }
+        });
 
-		// Initialize the send button with a listener that for click events
-		mSendButton = (Button) findViewById(R.id.button_service);
-		mSendButton.setOnClickListener(new OnClickListener() {
+		// Initialize the service button with a listener that for click events
+		mStartServiceButton = (Button) findViewById(R.id.button_service);
+		mStartServiceButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-		        // If BT is not on, request that it be enabled.
+		        /*// If BT is not on, request that it be enabled.
 		        // setupChat() will then be called during onActivityResult
 		        if (!mBluetoothAdapter.isEnabled()) {
 		            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -209,15 +214,25 @@ public class TestActivity extends Activity {
 
 					// Bind Bips
 					doBindService();
-		        }
-		        
+		        }*/
+		        doBindService();
 		        
 				mSendImageButton.setEnabled(true);
 				mCancelAllButton.setEnabled(true);
-				mCancelCurrentButton.setEnabled(true);
+                mCancelCurrentButton.setEnabled(true);
+                mPeriodicButton.setEnabled(true);
 			}
 		});
-
+		
+		// allow sending of images if bound
+		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+		if (mBtAdapter != null && !mBtAdapter.isDiscovering() && mIsBound)
+		{
+            mSendImageButton.setEnabled(true);
+            mCancelAllButton.setEnabled(true);
+            mCancelCurrentButton.setEnabled(true);
+            mPeriodicButton.setEnabled(true);
+		}
 	}
 
 	@Override
@@ -225,6 +240,14 @@ public class TestActivity extends Activity {
 		super.onResume();
 		if (D)
 			Log.e(TAG, "+ ON RESUME +");
+		if (mPeriodicFlag)
+		{
+		    mPeriodicButton.setText("Stop periodic requests");
+		}
+		else
+		{
+		    mPeriodicButton.setText("Start periodic requests");
+		}
 	}
 
 	@Override
@@ -232,12 +255,14 @@ public class TestActivity extends Activity {
 		super.onDestroy();
 		if (D)
 			Log.e(TAG, "+ ON DESTROY +");
+		mPeriodicFlag = false;
 		doUnbindService();
+		
 	}
 
 	/**
 	 * Handler of incoming messages from service.
-	 */
+	 
 	static class IncomingHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
@@ -249,17 +274,15 @@ public class TestActivity extends Activity {
 				super.handleMessage(msg);
 			}
 		}
-	}
+	}*/
 
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final IncomingHandler mHandler = new IncomingHandler();
+	final Handler mHandler = new Handler();
 	final Messenger mMessenger = new Messenger(mHandler);
 
-	/**
-	 * Class for interacting with the main interface of the service.
-	 */
+
 
 	/**
 	 * Class for interacting with the main interface of the service.
@@ -282,7 +305,6 @@ public class TestActivity extends Activity {
 				// disconnected (and then reconnected if it can be restarted)
 				// so there is no need to do anything here.
 			}
-
 	    }
 
 	    // Called when the connection with the service disconnects unexpectedly
@@ -291,53 +313,6 @@ public class TestActivity extends Activity {
 	        mIRemoteService = null;
 	    }
 	};
-/*	private ServiceConnection mConnection = new ServiceConnection() {
-		public void onServiceConnected(ComponentName className, IBinder service) {
-			// This is called when the connection with the service has been
-			// established, giving us the service object we can use to
-			// interact with the service. We are communicating with our
-			// service through an IDL interface, so get a client-side
-			// representation of that from the raw service object.
-			mService = new Messenger(service);
-			mCallbackText.setText("Attached.");
-
-			// We want to monitor the service for as long as we are
-			// connected to it.
-			try {
-				Message msg = Message.obtain(null,
-						BipsService.MSG_REGISTER_CLIENT);
-				msg.replyTo = mMessenger;
-				mService.send(msg);
-
-				// Give it some value as an example.
-				msg = Message.obtain(null, BipsService.MSG_SET_VALUE,
-						this.hashCode(), 0);
-				mService.send(msg);
-			} catch (RemoteException e) {
-				// In this case the service has crashed before we could even
-				// do anything with it; we can count on soon being
-				// disconnected (and then reconnected if it can be restarted)
-				// so there is no need to do anything here.
-			}
-
-			// As part of the sample, tell the user what happened.
-			// Toast.makeText(this, R.string.remote_service_connected,
-			// Toast.LENGTH_SHORT).show();
-		}
-
-		public void onServiceDisconnected(ComponentName className) {
-			// This is called when the connection with the service has been
-			// unexpectedly disconnected -- that is, its process crashed.
-			mService = null;
-			mCallbackText.setText("Disconnected.");
-
-			// As part of the sample, tell the user what happened.
-			// Toast.makeText(this, R.string.remote_service_disconnected,
-			// Toast.LENGTH_SHORT).show();
-		}
-	};
-*/
-	
 
     
 	void doBindService() {
@@ -373,55 +348,17 @@ public class TestActivity extends Activity {
         }
 	}
 	
-	/*
-	void doBindService() {
-		// Establish a connection with the service. We use an explicit
-		// class name because there is no reason to be able to let other
-		// applications replace our component.
-		if (!mIsBound) {
-			bindService(new Intent(this, BipsService.class), mConnection,
-					Context.BIND_AUTO_CREATE);
-			mIsBound = true;
-			mCallbackText.setText("Binding.");
-		} else {
-			mCallbackText.setText("Already Bound.");
-		}
-	}
-
-	void doUnbindService() {
-		if (mIsBound) {
-			// If we have received the service, and hence registered with
-			// it, then now is the time to unregister.
-			if (mService != null) {
-				try {
-					Message msg = Message.obtain(null,
-							BipsService.MSG_UNREGISTER_CLIENT);
-					msg.replyTo = mMessenger;
-					mService.send(msg);
-				} catch (RemoteException e) {
-					// There is nothing special we need to do if the service
-					// has crashed.
-				}
-			}
-
-			// Detach our existing connection.
-			unbindService(mConnection);
-			mIsBound = false;
-			mCallbackText.setText("Unbinding.");
-		}
-	}
-*/
 	byte[] getImageFromRadio(RadioGroup group) {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
 		if (temp.getText().toString().startsWith("U"))
-			return up;
+			return upFive;
 		if (temp.getText().toString().startsWith("D"))
-			return down;
+			return downFive;
 		if (temp.getText().toString().startsWith("L"))
-			return left;
+			return leftFive;
 		if (temp.getText().toString().startsWith("R"))
-			return right;
+			return rightFive;
 		return null;
 	}
 
@@ -429,32 +366,16 @@ public class TestActivity extends Activity {
 		RadioButton temp = (RadioButton) findViewById(group
 				.getCheckedRadioButtonId());
 		if (temp.getText().toString().startsWith("Highe"))
-			return BipsService.API_HIGHEST_PRIORITY;
+			return 0;
 		if (temp.getText().toString().startsWith("Lowe"))
-			return BipsService.API_LOWEST_PRIORITY;
+			return 4;
 		if (temp.getText().toString().startsWith("Low"))
-			return BipsService.API_LOW_PRIORITY;
+			return 3;
 		if (temp.getText().toString().startsWith("High"))
-			return BipsService.API_HIGH_PRIORITY;
-		return BipsService.API_MEDIUM_PRIORITY;
+			return 1;
+		return 2;
 	}
 	
-
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(D) Log.d(TAG, "onActivityResult " + resultCode);
-        switch (requestCode) {
-        case REQUEST_ENABLE_BT:
-            // When the request to enable Bluetooth returns
-            if (resultCode == Activity.RESULT_OK) {
-                // Bluetooth is now enabled, so set up a chat session
-                doBindService();
-            } else {
-                // User did not enable Bluetooth or an error occurred
-                Log.d(TAG, "BT not enabled");
-                Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
 	
 
     // ----------------------------------------------------------------------
@@ -478,8 +399,47 @@ public class TestActivity extends Activity {
          * to update the UI, we need to use a Handler to hop over there.
          */
         public void valueChanged(int value) {
-            mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+            mHandler.sendMessage(mHandler.obtainMessage(0, value, 0));
         }
+
+        /**
+         * This is called by the service to find out what applications are binding
+         * and using the projector to allow the user to assign priority to 
+         * which applications they prefer to see from the projector over other apps.
+         */
+        public String getClientPackageName()
+        {
+            return getPackageName();
+        }
+    };
+    
+    Thread mPeriodicRequestThread = null;
+    Runnable mPeriodicRequestProc = new Runnable()
+    {
+
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            while(mPeriodicFlag)
+            {
+                try {
+                    mIRemoteService.imageRequestQueue(down, Integer.parseInt(mDurationText
+                            .getText().toString()), (byte)0, getPackageName());
+                } catch (RemoteException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                try {
+                    Thread.sleep(Integer.parseInt(mDurationText
+                            .getText().toString()));
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        
     };
 }
 

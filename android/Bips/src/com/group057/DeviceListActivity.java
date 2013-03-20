@@ -27,10 +27,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
@@ -44,9 +44,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import com.group057.IRemoteService;
 
 /**
  * This Activity appears as a dialog. It lists any paired devices and
@@ -78,9 +75,10 @@ public class DeviceListActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        
         // Setup the window
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.device_list);
 
         // Set result CANCELED in case the user backs out
@@ -135,15 +133,12 @@ public class DeviceListActivity extends Activity {
             mPairedDevicesArrayAdapter.add(noDevices);
         }
         
-        doBindService();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         
-        // The application is done after choosing, unbind the service
-        doUnbindService();
         
         // Make sure we're not doing discovery anymore
         if (mBtAdapter != null) {
@@ -192,24 +187,21 @@ public class DeviceListActivity extends Activity {
 
             // Set result and finish this Activity
             setResult(Activity.RESULT_OK, intent);
-/*            
+          
             // Give the BIPS the BT device to connect to 
-            Message msg = Message.obtain(null,
-                    BipsService.REQUEST_CONNECT_DEVICE_SECURE, intent);
-            try {
-				mService.send(msg);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-            */
+//            try {
+//				mIRemoteService.deviceChosenConnect(address);
+//			} catch (RemoteException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
             
-            try {
-				mIRemoteService.deviceChosenConnect(address);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+            // Give BIPS the BT device by updating the preferences
+            SharedPreferences settings = getSharedPreferences(BipsService.BT_PREFS, 0);
+            SharedPreferences.Editor editor = settings.edit();
+            
+            editor.putString(BipsService.BT_DEVICE, address);
+            editor.apply();
             
             finish();
         }
@@ -248,8 +240,8 @@ public class DeviceListActivity extends Activity {
 	/**
 	 * Handler of incoming messages from service.
 	 */
-	class IncomingHandler extends Handler {
-	    @Override
+	static class IncomingHandler extends Handler {
+	    /*@Override
 	    public void handleMessage(Message msg) {
 	        switch (msg.what) {
 	            case BipsService.MSG_SET_VALUE:
@@ -258,13 +250,13 @@ public class DeviceListActivity extends Activity {
 	            default:
 	                super.handleMessage(msg);
 	        }
-	    }
+	    }*/
 	}
 
 	/**
 	 * Target we publish for clients to send messages to Incoming Handler.
 	 */
-	final IncomingHandler mHandler = new IncomingHandler();
+	final Handler mHandler = new Handler();
 	final Messenger mMessenger = new Messenger(mHandler);
 
 
@@ -399,6 +391,16 @@ public class DeviceListActivity extends Activity {
          */
         public void valueChanged(int value) {
             mHandler.sendMessage(mHandler.obtainMessage(BipsService.MSG_SET_VALUE, value, 0));
+        }
+        
+        /**
+         * This is called by the service to find out what applications are binding
+         * and using the projector to allow the user to assign priority to 
+         * which applications they prefer to see from the projector over other apps.
+         */
+        public String getClientPackageName()
+        {
+            return getPackageName();
         }
     };
     
