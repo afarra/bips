@@ -2,11 +2,17 @@
 #include <SoftwareSerial.h>
 
 #define FACES 6
-#define DEBUG false
+#define DEBUG true
+#define DESIRED_ROTATION_PERIOD 200000
+// alowed varience of the rotation speed
+#define ROTATION_PERIOD_VARIANCE 10000
+#define MIN_MOTOR_SPEED 70
+#define MOTOR_SPEED_HYSTERESIS 3
 
 // Constant Decalaraion
 const short DBG_LED_PIN = 13;
-const short LASER0_PIN = 3;
+const short MOTOR_PWM_PIN = 3;
+//const short LASER0_PIN = 3;
 const short LASER1_PIN = 4;
 const short LASER2_PIN = 5;
 const short LASER3_PIN = 6;
@@ -26,8 +32,10 @@ volatile unsigned long last_trigger = 0;
 volatile boolean triggered = false;
 
 // Calibration globals
-double duration_on_us = 5.10;
-double duration_off_us = 2.70;
+//double duration_on_us = 5.10;
+//double duration_off_us = 2.70;
+double duration_on_us = 7;
+double duration_off_us = 3;
 boolean face_toggle[] = {true, true, true, true, true, true};
 double face_offset[] = {-610.00, -613.00, -609.00, -616.00, -610.00, -610.50};
 //double face_offset[] = {340.00, 337.00, 341.00, 334.00, 340.00, 339.50};
@@ -45,27 +53,71 @@ unsigned int num_rotations = 0;
 
 // Serial setup for bluetooth
 SoftwareSerial mySerial(BT_RX, BT_TX); //rx, tx
+//byte image_buff[PAT_COLS] = {
+//  B01110111,
+//  B11111000,
+//  B10001000,
+//  B10001000,
+//  B10001000,
+//  B10001000,
+//  B11111000,
+//  B01110000,
+//  B00000000,
+//  B00000000,
+//  B00000000,
+//  B11111000,
+//  B11111000,
+//  B01000000,
+//  B01000000,
+//  B00100000,
+//  B00100000,
+//  B00010000,
+//  B11111000,
+//  B11111000,
+//};
+//byte image_buff[PAT_COLS] = {
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//  B11111111,
+//};
 byte image_buff[PAT_COLS] = {
-  B01110111,
-  B11111000,
-  B10001000,
-  B10001000,
-  B10001000,
-  B10001000,
-  B11111000,
-  B01110000,
   B00000000,
   B00000000,
   B00000000,
-  B11111000,
-  B11111000,
-  B01000000,
-  B01000000,
-  B00100000,
-  B00100000,
-  B00010000,
-  B11111000,
-  B11111000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B11111111,
+  B11111111,
+  B00000000,
+  B00000000,
+  B11111111,
+  B00000000,
+  B00000000,
+  B11111111,
+  B11111111,
+  B11111111,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
 };
 short receive_byte_count = 0;
 unsigned long image_time = (unsigned long) -1;
@@ -74,9 +126,12 @@ unsigned int image_time_buffer = 0;
 // Tilt sensing flag
 boolean tilt_detected = false;
 
+// Motor speed for pwm
+unsigned char motor_speed = 255;
+
 // Board Setup
 void setup(){
-  pinMode(LASER0_PIN, OUTPUT);
+//  pinMode(LASER0_PIN, OUTPUT);
   pinMode(LASER1_PIN, OUTPUT);
   pinMode(LASER2_PIN, OUTPUT);
   pinMode(LASER3_PIN, OUTPUT);
@@ -91,10 +146,18 @@ void setup(){
   Serial.begin(9600);
   // set the data rate for the SoftwareSerial port
   mySerial.begin(9600);
+  analogWrite(MOTOR_PWM_PIN, motor_speed);
 }
 
 // Infrared Sensor ISR
 void handle_ir(){
+  // Sometimes we get brief spikes from the reflectometer
+  // resulting in really low rotation period. Ignore those.
+  // I.e. everything unrealistic - higher than 2000rpm (3 0000us/rot).
+  unsigned long now = micros();
+  if ((now - last_trigger) < rotation_period / 3){
+    return; 
+  }
   rotation_period = micros() - last_trigger;
   last_trigger = micros();
   triggered = true;
@@ -118,7 +181,7 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
     if (col != 0) {
       delayMicroseconds(delay_off);
     }
-    digitalWrite(LASER0_PIN, pattern[col] & 128);	// binary 10000000
+//    digitalWrite(LASER0_PIN, pattern[col] & 128);	// binary 10000000
     digitalWrite(LASER1_PIN, pattern[col] & 64);	// binary 01000000
     digitalWrite(LASER2_PIN, pattern[col] & 32);	// binary 00100000
     digitalWrite(LASER3_PIN, pattern[col] & 16);
@@ -127,7 +190,7 @@ void output_pixel_bips(const byte pattern[PAT_COLS], int rows, int cols, unsigne
 //    digitalWrite(LASER6_PIN, pattern[col] & 2);
 //    digitalWrite(LASER7_PIN, pattern[col] & 1);
     delayMicroseconds(delay_on);
-    digitalWrite(LASER0_PIN, LOW);
+//    digitalWrite(LASER0_PIN, LOW);
     digitalWrite(LASER1_PIN, LOW);
     digitalWrite(LASER2_PIN, LOW);
     digitalWrite(LASER3_PIN, LOW);
@@ -171,24 +234,42 @@ void perf_secondary_tasks(int task_num){
     }
   }
   
-  // perform tilt check
-  if (task_num == 5)
-  { 
-    // variables to read the pulse widths:
-    int p1, p2;
-    p1 = digitalRead(TILT1_PIN);
-    p2 = digitalRead(TILT2_PIN);
-    
-    // is not in 'A' position (bad)
-    if (p1 == 1 || p2 == 1)
-    {
-      tilt_detected = true;
+  // Ajust the speed of the mirror assembly rotation
+  if (task_num == 1){
+    static char hysteresis = 0;
+    motor_speed += hysteresis / 3;
+    analogWrite(MOTOR_PWM_PIN, motor_speed);
+    if (rotation_period > (DESIRED_ROTATION_PERIOD + ROTATION_PERIOD_VARIANCE)
+        && motor_speed < 255){
+      hysteresis = (hysteresis == MOTOR_SPEED_HYSTERESIS) ? hysteresis : hysteresis + 1;
     }
-    else
-    {
-      tilt_detected = false;
-    }
+    else if (rotation_period < (DESIRED_ROTATION_PERIOD - ROTATION_PERIOD_VARIANCE)
+             && motor_speed > MIN_MOTOR_SPEED){
+      hysteresis = (hysteresis == 0 - MOTOR_SPEED_HYSTERESIS) ? hysteresis : hysteresis - 1; 
+    } 
+    else {
+      hysteresis = 0;
+    }   
   }
+  
+  // perform tilt check
+//  if (task_num == 5)
+//  { 
+//    // variables to read the pulse widths:
+//    int p1, p2;
+//    p1 = digitalRead(TILT1_PIN);
+//    p2 = digitalRead(TILT2_PIN);
+//    
+//    // is not in 'A' position (bad)
+//    if (p1 == 1 || p2 == 1)
+//    {
+//      tilt_detected = true;
+//    }
+//    else
+//    {
+//      tilt_detected = false;
+//    }
+//  }
 
 }
 
@@ -214,7 +295,7 @@ void loop(){
       unsigned long next_face = last_trig + (face_period * (i + 1)) + (face_period * face_offset[i] / 1000);
       
       // Perform other tasks beetween faces
-      //perf_secondary_tasks(i);
+      perf_secondary_tasks(i);
       
       while (micros() < next_face){
       }
@@ -227,7 +308,7 @@ void loop(){
       if (face_toggle[i]) {
         // output blank if the projection time has elapsed
         // or if a tilt is detected
-        if (image_time < millis() /*|| tilt_detected*/)
+        if (image_time < millis() || tilt_detected)
         {
           output_pixel_bips(pat_byte_empty, PAT_ROWS, PAT_COLS, face_period);
         }
@@ -238,8 +319,15 @@ void loop(){
       }
     }
   }
+  // Reset the motor speed to max and reset the time per period 
+  // if a stall was detected 1s since last trigger
+  else if (micros() > (last_trigger + 1000000)){
+    motor_speed = 255;
+    analogWrite(MOTOR_PWM_PIN, motor_speed);
+    rotation_period = 0;
+  }
   else if (laser_on_override){
-    digitalWrite(LASER0_PIN, HIGH);
+//    digitalWrite(LASER0_PIN, HIGH);
     digitalWrite(LASER1_PIN, HIGH);
     digitalWrite(LASER2_PIN, HIGH);
     digitalWrite(LASER3_PIN, HIGH);
@@ -264,7 +352,9 @@ void handle_diag_cmd() {
       Serial.print("; T-face: ");
       Serial.print(rotation_period/FACES);
       Serial.print("; rot#: ");
-      Serial.println(num_rotations);
+      Serial.print(num_rotations);
+      Serial.print("; Motor speed: ");
+      Serial.println(motor_speed);
     }
     else if (b == '?') {
       Serial.print("ON time: ");
@@ -305,7 +395,7 @@ void handle_diag_cmd() {
     else if (b == ';') {
       Serial.print("Stopping laser ON override.\n");
       laser_on_override = false;
-      digitalWrite(LASER0_PIN, LOW);
+//      digitalWrite(LASER0_PIN, LOW);
     }
     else if (b == '\'') {
       Serial.print("Starting laser ON override.\n");
